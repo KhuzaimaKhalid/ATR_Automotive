@@ -28,6 +28,19 @@ const createSale = async (req, res) => {
 
         let subtotal = 0;
         for (const item of items) {
+            const product = db.prepare(
+                "SELECT stock_quantity FROM products WHERE id = ?"
+            ).get(item.product_id);
+            
+            if (!product) {
+                return res.status(404).json({ message: "Product not found" });
+            }
+            
+            if (item.qty > product.stock_quantity) {
+                return res.status(400).json({
+                    message: "Insufficient stock"
+                });
+            }
             if (!item.product_id || !item.qty || !item.price) {
                 return res.status(400).json({ message: 'Each item must have product_id, qty and price' });
             }
@@ -55,7 +68,7 @@ const createSale = async (req, res) => {
         );
 
         const transaction = db.transaction(() => {
-            const saleResult = insertSale.run(invoice_no, subtotal, labor, total, paid_amount, change, req.user?.id || null);
+            const saleResult = insertSale.run(invoice_no, subtotal, labor, total, paid_amount, change, req.user?.id);
             const sale_id = saleResult.lastInsertRowid;
             for (const item of items) {
                 insertItem.run(sale_id, item.product_id, item.qty, item.price);

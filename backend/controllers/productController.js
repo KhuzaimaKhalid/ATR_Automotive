@@ -3,8 +3,8 @@ const db = require('../config/connectDB');
 const createProduct = async(req,res) =>{
     try {
         const {name,image, purchase_price, selling_price,stock_quantity,min_stock_level,status, category_id} = req.body;
-        if(!name || !image || !purchase_price || !selling_price || !stock_quantity || !min_stock_level || !status || !category_id) {
-            return res.status(400).json({message: 'Please fill all fields'});
+        if (!name || !image || purchase_price == null || selling_price == null || stock_quantity == null || min_stock_level == null || !status || category_id == null) {
+            return res.status(400).json({ message: "Please fill all fields" });
         }
         const sql = 'INSERT INTO products (name,image, purchase_price, selling_price,stock_quantity,min_stock_level,status, category_id) VALUES (?,?,?,?,?,?,?,?)';
         const result = db.prepare(sql).run(name,image, purchase_price, selling_price,stock_quantity,min_stock_level,status, category_id);
@@ -45,8 +45,8 @@ const updateProduct = async(req,res) =>{
     try {
         const {id} = req.params;
         const {name,image, purchase_price, selling_price,stock_quantity,min_stock_level,status, category_id} = req.body;
-        if(!name || !image || !purchase_price || !selling_price || !stock_quantity || !min_stock_level || !status || !category_id) {
-            return res.status(400).json({message: 'Please fill all fields'});
+        if ( !name || !image || purchase_price == null || selling_price == null || stock_quantity == null || min_stock_level == null || !status || category_id == null) {
+            return res.status(400).json({ message: "Please fill all fields" });
         }
         const sql = 'UPDATE products SET name = ?, image = ?, purchase_price = ?, selling_price = ?, stock_quantity = ?, min_stock_level = ?, status = ?, category_id = ? WHERE id = ?';
         const result = db.prepare(sql).run(name,image, purchase_price, selling_price,stock_quantity,min_stock_level,status, category_id,id);
@@ -79,8 +79,8 @@ const updateStock = async(req,res) =>{
     try {
         const {id} = req.params;
         const {stock_quantity} = req.body;
-        if(!stock_quantity) {
-            return res.status(400).json({message: 'Please provide stock quantity'});
+        if (stock_quantity == null) {
+            return res.status(400).json({ message: "Please provide stock quantity" });
         }
         const sql = 'UPDATE products SET stock_quantity = ? WHERE id = ?';
         const result = db.prepare(sql).run(stock_quantity,id);

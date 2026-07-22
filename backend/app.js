@@ -5,6 +5,11 @@ require("dotenv").config();
 require("./config/connectDB");
 
 const userRoutes = require("./routes/userRoutes");
+const categoriesRoutes = require("./routes/categoriesRoutes");
+const productRoutes = require("./routes/productRoutes");
+const salesRoutes = require("./routes/saleRoutes");
+const reportRoutes = require("./routes/reportRoutes");
+const returnRoutes = require("./routes/returnRoutes");
 
 const app = express();
 
@@ -18,6 +23,11 @@ app.get("/", (req, res) => {
 });
 
 app.use("/api/user", userRoutes);
+app.use("/api/categories", categoriesRoutes);
+app.use("/api/product", productRoutes);
+app.use("/api/sales", salesRoutes);
+app.use("/api/report", reportRoutes);
+app.use("/api/return", returnRoutes);
 
 app.listen(PORT, () => {
     console.log(`Listening on ${PORT}`);
