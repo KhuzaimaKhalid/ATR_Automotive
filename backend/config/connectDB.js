@@ -3,7 +3,7 @@ const path = require("path");
 const fs = require("fs");
 
 let dbPath = path.join(__dirname, "../database.db");
-
+db.pragma('foreign_keys = ON');
 if (process.env.VERCEL) {
     const tmpPath = path.join("/tmp", "database.db");
     
