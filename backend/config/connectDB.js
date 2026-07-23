@@ -8,7 +8,11 @@ if (process.env.VERCEL) {
     const tmpPath = path.join("/tmp", "database.db");
     
     if (!fs.existsSync(tmpPath)) {
-        fs.copyFileSync(dbPath, tmpPath);
+        if (fs.existsSync(dbPath)) {
+            fs.copyFileSync(dbPath, tmpPath);
+        } else {
+            fs.writeFileSync(tmpPath, "");
+        }
     }
     
     dbPath = tmpPath;
