@@ -4,6 +4,8 @@ const { put, del } = require('@vercel/blob');
 const createCategories = async (req, res) => {
     try {
         const { name } = req.body;
+        console.log("Body:", req.body); // 👈 Log text fields
+        console.log("File:", req.file);
         if (!name || !req.file) {
             return res.status(400).json({ message: "Please provide all required fields" });
         }
