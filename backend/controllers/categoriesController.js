@@ -4,22 +4,28 @@ const { put, del } = require('@vercel/blob');
 const createCategories = async (req, res) => {
     try {
         const { name } = req.body;
-        console.log("Body:", req.body); // 👈 Log text fields
-        console.log("File:", req.file);
+
         if (!name || !req.file) {
             return res.status(400).json({ message: "Please provide all required fields" });
         }
+
         const blob = await put(`categories/${Date.now()}-${req.file.originalname}`, req.file.buffer, {
-            access: 'public',
+            addRandomSuffix: true 
         });
+
         const sql = 'INSERT INTO categories (name, image) VALUES (?, ?)';
         const result = db.prepare(sql).run(name, blob.url);
-        return res.status(201).json({ message: "Category created successfully", categoryId: result.lastInsertRowid, image: blob.url });
+
+        return res.status(201).json({ 
+            message: "Category created successfully", 
+            categoryId: result.lastInsertRowid, 
+            image: blob.url 
+        });
     } catch (error) {
         console.error(error);
         return res.status(500).json({ message: "Server error", error: error.message });
     }
-}
+};
 
 const getAllCategories = async (req, res) => {
     try {
@@ -54,6 +60,7 @@ const updateCategory = async (req, res) => {
     try {
         const { id } = req.params;
         const { name } = req.body;
+        
         if (!name) {
             return res.status(400).json({ message: "Please provide all required fields" });
         }
@@ -63,11 +70,11 @@ const updateCategory = async (req, res) => {
         }
         let imageUrl = existing.image;
         if (req.file) {
-            if (existing.image && existing.image.includes('public.blob.vercel-storage.com')) {
+            if (existing.image && existing.image.includes('blob.vercel-storage.com')) {
                 await del(existing.image);
             }
             const blob = await put(`categories/${Date.now()}-${req.file.originalname}`, req.file.buffer, {
-                access: 'public',
+                addRandomSuffix: true
             });
             imageUrl = blob.url;
         }
