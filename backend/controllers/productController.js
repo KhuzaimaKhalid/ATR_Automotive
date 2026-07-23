@@ -1,19 +1,49 @@
 const db = require('../config/connectDB');
+const { put, del } = require('@vercel/blob');
 
-const createProduct = async(req,res) =>{
+const createProduct = async (req, res) => {
     try {
-        const {name,image, purchase_price, selling_price,stock_quantity,min_stock_level,status, category_id} = req.body;
-        if (!name || !image || purchase_price == null || selling_price == null || stock_quantity == null || min_stock_level == null || !status || category_id == null) {
-            return res.status(400).json({ message: "Please fill all fields" });
-        }
-        const sql = 'INSERT INTO products (name,image, purchase_price, selling_price,stock_quantity,min_stock_level,status, category_id) VALUES (?,?,?,?,?,?,?,?)';
-        const result = db.prepare(sql).run(name,image, purchase_price, selling_price,stock_quantity,min_stock_level,status, category_id);
-        return res.status(201).json({message: 'Product created successfully', product_id: result.lastInsertRowid});
+      const { category_id, name, purchase_price, selling_price, stock_quantity, min_stock_level, status } = req.body;
+  
+      if (!name || !purchase_price || !selling_price || !stock_quantity) {
+        return res.status(400).json({ message: "Required fields are missing" });
+      }
+  
+      let imageUrl = null;
+  
+      if (req.file) {
+        const blob = await put(`products/${Date.now()}-${req.file.originalname}`, req.file.buffer, {
+          access: 'public',
+        });
+        imageUrl = blob.url;
+      }
+  
+      const sql = `
+        INSERT INTO products (category_id, name, image, purchase_price, selling_price, stock_quantity, min_stock_level, status)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `;
+  
+      const info = db.prepare(sql).run(
+        category_id || null,
+        name,
+        imageUrl,
+        purchase_price,
+        selling_price,
+        stock_quantity,
+        min_stock_level || 0,
+        status || 'Active'
+      );
+  
+      return res.status(201).json({
+        message: "Product created successfully",
+        productId: info.lastInsertRowid,
+        image: imageUrl
+      });
     } catch (error) {
-        console.error(error)
-        return res.status(500).json({message: 'Server error'});
+      console.error(error);
+      return res.status(500).json({ message: "Server error" });
     }
-}
+  };
 
 const getAllProducts = async(req,res) =>{
     try {
@@ -41,39 +71,58 @@ const getProductById = async(req,res) =>{
     }
 }
 
-const updateProduct = async(req,res) =>{
+const updateProduct = async (req, res) => {
     try {
-        const {id} = req.params;
-        const {name,image, purchase_price, selling_price,stock_quantity,min_stock_level,status, category_id} = req.body;
-        if ( !name || !image || purchase_price == null || selling_price == null || stock_quantity == null || min_stock_level == null || !status || category_id == null) {
+        const { id } = req.params;
+        const { category_id, name, purchase_price, selling_price, stock_quantity, min_stock_level, status } = req.body;
+        if (!name || purchase_price == null || selling_price == null || stock_quantity == null || min_stock_level == null || !status || category_id == null) {
             return res.status(400).json({ message: "Please fill all fields" });
         }
-        const sql = 'UPDATE products SET name = ?, image = ?, purchase_price = ?, selling_price = ?, stock_quantity = ?, min_stock_level = ?, status = ?, category_id = ? WHERE id = ?';
-        const result = db.prepare(sql).run(name,image, purchase_price, selling_price,stock_quantity,min_stock_level,status, category_id,id);
-        if(result.changes === 0) {
-            return res.status(404).json({message: 'Product not found'});
+        const existing = db.prepare('SELECT image FROM products WHERE id = ?').get(id);
+        if (!existing) {
+            return res.status(404).json({ message: "Product not found" });
         }
-        return res.status(200).json({message: 'Product updated successfully'});
+        let imageUrl = existing.image;
+        if (req.file) {
+            if (existing.image && existing.image.includes('public.blob.vercel-storage.com')) {
+                await del(existing.image);
+            }
+            const blob = await put(`products/${Date.now()}-${req.file.originalname}`, req.file.buffer, {
+                access: 'public',
+            });
+            imageUrl = blob.url;
+        }
+        const sql = 'UPDATE products SET name = ?, image = ?, purchase_price = ?, selling_price = ?, stock_quantity = ?, min_stock_level = ?, status = ?, category_id = ? WHERE id = ?';
+        db.prepare(sql).run(name, imageUrl, purchase_price, selling_price, stock_quantity, min_stock_level, status, category_id, id);
+        return res.status(200).json({ message: "Product updated successfully", image: imageUrl });
     } catch (error) {
-        console.error(error)
-        return res.status(500).json({message: 'Server error'});
+        console.error(error);
+        return res.status(500).json({ message: "Server error" });
     }
 }
 
-const deleteProduct = async(req,res) =>{
+const deleteProduct = async (req, res) => {
     try {
-        const {id} = req.params;
-        const sql = 'DELETE FROM products WHERE id = ?';
-        const result = db.prepare(sql).run(id);
-        if(result.changes === 0) {
-            return res.status(404).json({message: 'Product not found'});
-        }
-        return res.status(200).json({message: 'Product deleted successfully'});
+      const { id } = req.params;
+  
+      const product = db.prepare('SELECT image FROM products WHERE id = ?').get(id);
+  
+      if (!product) {
+        return res.status(404).json({ message: "Product not found" });
+      }
+  
+      if (product.image && product.image.includes('public.blob.vercel-storage.com')) {
+        await del(product.image);
+      }
+  
+      db.prepare('DELETE FROM products WHERE id = ?').run(id);
+  
+      return res.status(200).json({ message: "Product deleted successfully" });
     } catch (error) {
-        console.error(error)
-        return res.status(500).json({message: 'Server error'});
+      console.error(error);
+      return res.status(500).json({ message: "Server error" });
     }
-}
+  };
 
 const updateStock = async(req,res) =>{
     try {

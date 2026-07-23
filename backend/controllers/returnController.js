@@ -44,9 +44,9 @@ WHERE ri.return_id = ?
         const items = db.prepare(`
             SELECT
                 p.name,
-                ri.quantity,
+                ri.qty,
                 ri.price,
-                (ri.quantity * ri.price) AS total
+                (ri.qty * ri.price) AS total
             FROM return_items ri
             JOIN products p ON ri.product_id = p.id
             WHERE ri.return_id = ?
@@ -216,48 +216,38 @@ const createReturn = async (req, res) => {
 
 const deleteReturn = async (req, res) => {
     try {
-        const transaction = db.transaction(() => {
-            const returnItems = db.prepare(`
-                SELECT product_id, qty
-                FROM return_items
-                WHERE return_id = ?
-            `).all(id);
-        
-            for (const item of returnItems) {
-                db.prepare(`
-                    UPDATE products
-                    SET stock_quantity = stock_quantity - ?
-                    WHERE id = ?
-                `).run(item.qty, item.product_id);
-            }
-        
-            db.prepare(`
-                DELETE FROM return_items
-                WHERE return_id = ?
-            `).run(id);
-        
-            const result = db.prepare(`
-                DELETE FROM returns
-                WHERE id = ?
-            `).run(id);
-        
-            return result;
-        });
-        
-        const result = transaction();
-        
-        if (result.changes === 0) {
-            return res.status(404).json({ message: "Return not found" });
+      const { id } = req.params;
+  
+      if (!id) {
+        return res.status(400).json({ message: "Return ID is required" });
+      }
+  
+      const deleteTx = db.transaction((returnId) => {
+        const items = db.prepare('SELECT * FROM return_items WHERE return_id = ?').all(returnId);
+  
+        const updateStock = db.prepare('UPDATE products SET stock_quantity = stock_quantity - ? WHERE id = ?');
+        for (const item of items) {
+          updateStock.run(item.qty, item.product_id);
         }
-        
-        return res.status(200).json({
-            message: "Return deleted successfully"
-        });
+  
+        db.prepare('DELETE FROM return_items WHERE return_id = ?').run(returnId);
+        const result = db.prepare('DELETE FROM returns WHERE id = ?').run(returnId);
+  
+        return result.changes;
+      });
+  
+      const changes = deleteTx(id);
+  
+      if (changes === 0) {
+        return res.status(404).json({ message: "Return not found" });
+      }
+  
+      return res.status(200).json({ message: "Return deleted successfully" });
     } catch (error) {
-        console.error(error);
-        return res.status(500).json({ message: "Server error" });
+      console.error(error);
+      return res.status(500).json({ message: "Server error" });
     }
-};
+  };
 
 module.exports = {
     getReturns,
