@@ -9,7 +9,9 @@ const createCategories = async (req, res) => {
             return res.status(400).json({ message: "Please provide all required fields" });
         }
 
+        // Pass 'm2m' for private Blob stores so Vercel accepts the upload
         const blob = await put(`categories/${Date.now()}-${req.file.originalname}`, req.file.buffer, {
+            access: 'm2m',
             addRandomSuffix: true 
         });
 
@@ -21,6 +23,41 @@ const createCategories = async (req, res) => {
             categoryId: result.lastInsertRowid, 
             image: blob.url 
         });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: "Server error", error: error.message });
+    }
+};
+
+const updateCategory = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { name } = req.body;
+        
+        if (!name) {
+            return res.status(400).json({ message: "Please provide all required fields" });
+        }
+        const existing = db.prepare('SELECT image FROM categories WHERE id = ?').get(id);
+        if (!existing) {
+            return res.status(404).json({ message: "Category not found" });
+        }
+        let imageUrl = existing.image;
+        if (req.file) {
+            if (existing.image && existing.image.includes('blob.vercel-storage.com')) {
+                await del(existing.image);
+            }
+            const blob = await put(`categories/${Date.now()}-${req.file.originalname}`, req.file.buffer, {
+                access: 'm2m',
+                addRandomSuffix: true
+            });
+            imageUrl = blob.url;
+        }
+        const sql = 'UPDATE categories SET name = ?, image = ? WHERE id = ?';
+        const result = db.prepare(sql).run(name, imageUrl, id);
+        if (result.changes === 0) {
+            return res.status(404).json({ message: "Category not found" });
+        }
+        return res.status(200).json({ message: "Category updated successfully", image: imageUrl });
     } catch (error) {
         console.error(error);
         return res.status(500).json({ message: "Server error", error: error.message });
@@ -54,41 +91,7 @@ const getCategoriesById = async (req, res) => {
         console.error(error);
         return res.status(500).json({ message: "Server error", error: error.message });
     }
-}
-
-const updateCategory = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { name } = req.body;
-        
-        if (!name) {
-            return res.status(400).json({ message: "Please provide all required fields" });
-        }
-        const existing = db.prepare('SELECT image FROM categories WHERE id = ?').get(id);
-        if (!existing) {
-            return res.status(404).json({ message: "Category not found" });
-        }
-        let imageUrl = existing.image;
-        if (req.file) {
-            if (existing.image && existing.image.includes('blob.vercel-storage.com')) {
-                await del(existing.image);
-            }
-            const blob = await put(`categories/${Date.now()}-${req.file.originalname}`, req.file.buffer, {
-                addRandomSuffix: true
-            });
-            imageUrl = blob.url;
-        }
-        const sql = 'UPDATE categories SET name = ?, image = ? WHERE id = ?';
-        const result = db.prepare(sql).run(name, imageUrl, id);
-        if (result.changes === 0) {
-            return res.status(404).json({ message: "Category not found" });
-        }
-        return res.status(200).json({ message: "Category updated successfully", image: imageUrl });
-    } catch (error) {
-        console.error(error);
-        return res.status(500).json({ message: "Server error", error: error.message });
-    }
-}
+};
 
 const deleteCategory = async (req, res) => {
     try {
@@ -97,7 +100,7 @@ const deleteCategory = async (req, res) => {
         if (!category) {
             return res.status(404).json({ message: "Category not found" });
         }
-        if (category.image && category.image.includes('public.blob.vercel-storage.com')) {
+        if (category.image && category.image.includes('blob.vercel-storage.com')) {
             await del(category.image);
         }
         db.prepare('DELETE FROM categories WHERE id = ?').run(id);
@@ -106,7 +109,7 @@ const deleteCategory = async (req, res) => {
         console.error(error);
         return res.status(500).json({ message: "Server error", error: error.message });
     }
-}
+};
 
 module.exports = {
     createCategories,
@@ -114,4 +117,4 @@ module.exports = {
     getCategoriesById,
     updateCategory,
     deleteCategory
-}
+};
