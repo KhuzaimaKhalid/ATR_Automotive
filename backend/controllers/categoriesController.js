@@ -9,9 +9,8 @@ const createCategories = async (req, res) => {
             return res.status(400).json({ message: "Please provide all required fields" });
         }
 
-        // Pass 'm2m' for private Blob stores so Vercel accepts the upload
         const blob = await put(`categories/${Date.now()}-${req.file.originalname}`, req.file.buffer, {
-            access: 'm2m',
+            access: 'public',
             addRandomSuffix: true 
         });
 
@@ -47,7 +46,7 @@ const updateCategory = async (req, res) => {
                 await del(existing.image);
             }
             const blob = await put(`categories/${Date.now()}-${req.file.originalname}`, req.file.buffer, {
-                access: 'm2m',
+                access: 'public',
                 addRandomSuffix: true
             });
             imageUrl = blob.url;
