@@ -2,7 +2,7 @@ const db = require("../config/connectDB");
 
 const getReturns = async (req, res) => {
     try {
-        const returns = db.prepare(`
+        const returns = await db.prepare(`
             SELECT
                 r.id,
                 r.return_no,
@@ -26,7 +26,7 @@ const getReturnById = async (req, res) => {
     try {
         const { id } = req.params;
 
-        const returnData = db.prepare(`
+        const returnData = await db.prepare(`
             SELECT
     p.name,
     ri.qty,
@@ -41,7 +41,7 @@ WHERE ri.return_id = ?
             return res.status(404).json({ message: "Return not found" });
         }
 
-        const items = db.prepare(`
+        const items = await db.prepare(`
             SELECT
                 p.name,
                 ri.qty,
@@ -66,7 +66,7 @@ const getInvoiceForReturn = async (req, res) => {
     try {
         const { invoiceNo } = req.params;
 
-        const invoice = db.prepare(`
+        const invoice = await db.prepare(`
             SELECT *
             FROM sales
             WHERE invoice_no = ?
@@ -76,7 +76,7 @@ const getInvoiceForReturn = async (req, res) => {
             return res.status(404).json({ message: "Invoice not found" });
         }
 
-        const items = db.prepare(`
+        const items = await db.prepare(`
             SELECT
                 si.id,
                 si.product_id,
@@ -105,8 +105,8 @@ const createReturn = async (req, res) => {
         return res.status(400).json({ message: "Invalid return data" });
     }
 
-    const transaction = db.transaction(() => {
-        const sale = db.prepare(
+    const transaction = db.transaction(async (txDb) => {
+        const sale = await txDb.prepare(
             "SELECT * FROM sales WHERE id = ?"
         ).get(sale_id);
 
@@ -118,7 +118,7 @@ const createReturn = async (req, res) => {
 
         const returnNo = `RE-${String(Date.now()).slice(-6)}`;
 
-        const returnResult = db.prepare(`
+        const returnResult = await txDb.prepare(`
             INSERT INTO returns (
                 return_no,
                 sale_id,
@@ -126,18 +126,12 @@ const createReturn = async (req, res) => {
                 reason
             )
             VALUES (?, ?, ?, ?)
-        `).run(
-            returnNo,
-            sale_id,
-            0,
-            reason || null
-        );
+        `).run(returnNo, sale_id, 0, reason || null);
 
         const returnId = returnResult.lastInsertRowid;
 
         for (const item of items) {
-
-            const saleItem = db.prepare(`
+            const saleItem = await txDb.prepare(`
                 SELECT id, product_id, qty, price
                 FROM sale_items
                 WHERE id = ? AND sale_id = ?
@@ -147,7 +141,7 @@ const createReturn = async (req, res) => {
                 throw new Error("Invalid sale item");
             }
 
-            const returnedQty = db.prepare(`
+            const returnedQty = await txDb.prepare(`
                 SELECT COALESCE(SUM(qty),0) AS returned
                 FROM return_items
                 WHERE sale_item_id = ?
@@ -159,7 +153,7 @@ const createReturn = async (req, res) => {
                 throw new Error("Return quantity exceeds remaining quantity");
             }
 
-            db.prepare(`
+            await txDb.prepare(`
                 INSERT INTO return_items (
                     return_id,
                     sale_item_id,
@@ -168,27 +162,18 @@ const createReturn = async (req, res) => {
                     price
                 )
                 VALUES (?, ?, ?, ?, ?)
-            `).run(
-                returnId,
-                saleItem.id,
-                saleItem.product_id,
-                item.qty,
-                saleItem.price
-            );
+            `).run(returnId, saleItem.id, saleItem.product_id, item.qty, saleItem.price);
 
-            db.prepare(`
+            await txDb.prepare(`
                 UPDATE products
                 SET stock_quantity = stock_quantity + ?
                 WHERE id = ?
-            `).run(
-                item.qty,
-                saleItem.product_id
-            );
+            `).run(item.qty, saleItem.product_id);
 
             totalRefund += item.qty * saleItem.price;
         }
 
-        db.prepare(`
+        await txDb.prepare(`
             UPDATE returns
             SET total_refund = ?
             WHERE id = ?
@@ -201,7 +186,7 @@ const createReturn = async (req, res) => {
     });
 
     try {
-        const result = transaction();
+        const result = await transaction();
 
         return res.status(201).json({
             message: "Return processed successfully",
@@ -217,37 +202,37 @@ const createReturn = async (req, res) => {
 const deleteReturn = async (req, res) => {
     try {
       const { id } = req.params;
-  
+
       if (!id) {
         return res.status(400).json({ message: "Return ID is required" });
       }
-  
-      const deleteTx = db.transaction((returnId) => {
-        const items = db.prepare('SELECT * FROM return_items WHERE return_id = ?').all(returnId);
-  
-        const updateStock = db.prepare('UPDATE products SET stock_quantity = stock_quantity - ? WHERE id = ?');
+
+      const deleteTx = db.transaction(async (txDb, returnId) => {
+        const items = await txDb.prepare('SELECT * FROM return_items WHERE return_id = ?').all(returnId);
+
         for (const item of items) {
-          updateStock.run(item.qty, item.product_id);
+          await txDb.prepare('UPDATE products SET stock_quantity = stock_quantity - ? WHERE id = ?')
+            .run(item.qty, item.product_id);
         }
-  
-        db.prepare('DELETE FROM return_items WHERE return_id = ?').run(returnId);
-        const result = db.prepare('DELETE FROM returns WHERE id = ?').run(returnId);
-  
+
+        await txDb.prepare('DELETE FROM return_items WHERE return_id = ?').run(returnId);
+        const result = await txDb.prepare('DELETE FROM returns WHERE id = ?').run(returnId);
+
         return result.changes;
       });
-  
-      const changes = deleteTx(id);
-  
+
+      const changes = await deleteTx(id);
+
       if (changes === 0) {
         return res.status(404).json({ message: "Return not found" });
       }
-  
+
       return res.status(200).json({ message: "Return deleted successfully" });
     } catch (error) {
       console.error(error);
       return res.status(500).json({ message: "Server error" });
     }
-  };
+};
 
 module.exports = {
     getReturns,

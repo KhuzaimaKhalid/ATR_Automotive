@@ -11,7 +11,14 @@ const authUser = async (req, res, next) => {
             return res.status(401).json({ status: "failed", message: "Not authorized, no token" });
         }
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        const user = db.prepare('SELECT id, full_name, email, role, is_active FROM users WHERE id = ?').get(decoded.id);
+        
+        // Execute query using Turso's db.execute API
+        const result = await db.execute({
+            sql: 'SELECT id, full_name, email, role, is_active FROM users WHERE id = ?',
+            args: [decoded.id]
+        });
+        const user = result.rows[0];
+
         if (!user) {
             return res.status(401).json({ status: "failed", message: "User not found" });
         }

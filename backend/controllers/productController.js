@@ -23,7 +23,7 @@ const createProduct = async (req, res) => {
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       `;
   
-      const info = db.prepare(sql).run(
+      const info = await db.prepare(sql).run(
         category_id || null,
         name,
         imageUrl,
@@ -36,40 +36,14 @@ const createProduct = async (req, res) => {
   
       return res.status(201).json({
         message: "Product created successfully",
-        productId: info.lastInsertRowid,
+        productId: Number(info.lastInsertRowid),
         image: imageUrl
       });
     } catch (error) {
       console.error(error);
       return res.status(500).json({ message: "Server error" });
     }
-  };
-
-const getAllProducts = async(req,res) =>{
-    try {
-        const sql = 'SELECT * FROM products';
-        const products = db.prepare(sql).all();
-        return res.status(200).json(products);
-    } catch (error) {
-        console.error(error)
-        return res.status(500).json({message: 'Server error'});
-    }
-}
-
-const getProductById = async(req,res) =>{
-    try {
-        const {id} = req.params;
-        const sql = 'SELECT * FROM products WHERE id = ?';
-        const product = db.prepare(sql).get(id);
-        if(!product) {
-            return res.status(404).json({message: 'Product not found'});
-        }
-        return res.status(200).json(product);
-    } catch (error) {
-        console.error(error)
-        return res.status(500).json({message: 'Server error'});
-    }
-}
+};
 
 const updateProduct = async (req, res) => {
     try {
@@ -78,7 +52,7 @@ const updateProduct = async (req, res) => {
         if (!name || purchase_price == null || selling_price == null || stock_quantity == null || min_stock_level == null || !status || category_id == null) {
             return res.status(400).json({ message: "Please fill all fields" });
         }
-        const existing = db.prepare('SELECT image FROM products WHERE id = ?').get(id);
+        const existing = await db.prepare('SELECT image FROM products WHERE id = ?').get(id);
         if (!existing) {
             return res.status(404).json({ message: "Product not found" });
         }
@@ -93,7 +67,7 @@ const updateProduct = async (req, res) => {
             imageUrl = blob.url;
         }
         const sql = 'UPDATE products SET name = ?, image = ?, purchase_price = ?, selling_price = ?, stock_quantity = ?, min_stock_level = ?, status = ?, category_id = ? WHERE id = ?';
-        db.prepare(sql).run(name, imageUrl, purchase_price, selling_price, stock_quantity, min_stock_level, status, category_id, id);
+        await db.prepare(sql).run(name, imageUrl, purchase_price, selling_price, stock_quantity, min_stock_level, status, category_id, id);
         return res.status(200).json({ message: "Product updated successfully", image: imageUrl });
     } catch (error) {
         console.error(error);
@@ -105,7 +79,7 @@ const deleteProduct = async (req, res) => {
     try {
       const { id } = req.params;
   
-      const product = db.prepare('SELECT image FROM products WHERE id = ?').get(id);
+      const product = await db.prepare('SELECT image FROM products WHERE id = ?').get(id);
   
       if (!product) {
         return res.status(404).json({ message: "Product not found" });
@@ -115,14 +89,40 @@ const deleteProduct = async (req, res) => {
         await del(product.image);
       }
   
-      db.prepare('DELETE FROM products WHERE id = ?').run(id);
+      await db.prepare('DELETE FROM products WHERE id = ?').run(id);
   
       return res.status(200).json({ message: "Product deleted successfully" });
     } catch (error) {
       console.error(error);
       return res.status(500).json({ message: "Server error" });
     }
-  };
+};
+
+const getAllProducts = async(req,res) =>{
+    try {
+        const sql = 'SELECT * FROM products';
+        const products = await db.prepare(sql).all();
+        return res.status(200).json(products);
+    } catch (error) {
+        console.error(error)
+        return res.status(500).json({message: 'Server error'});
+    }
+}
+
+const getProductById = async(req,res) =>{
+    try {
+        const {id} = req.params;
+        const sql = 'SELECT * FROM products WHERE id = ?';
+        const product = await db.prepare(sql).get(id);
+        if(!product) {
+            return res.status(404).json({message: 'Product not found'});
+        }
+        return res.status(200).json(product);
+    } catch (error) {
+        console.error(error)
+        return res.status(500).json({message: 'Server error'});
+    }
+}
 
 const updateStock = async(req,res) =>{
     try {
@@ -132,7 +132,7 @@ const updateStock = async(req,res) =>{
             return res.status(400).json({ message: "Please provide stock quantity" });
         }
         const sql = 'UPDATE products SET stock_quantity = ? WHERE id = ?';
-        const result = db.prepare(sql).run(stock_quantity,id);
+        const result = await db.prepare(sql).run(stock_quantity,id);
         if(result.changes === 0) {
             return res.status(404).json({message: 'Product not found'});
         }
@@ -147,7 +147,7 @@ const getLowStockProducts = async(req,res) =>{
 
     try {
         const sql = 'SELECT * FROM products WHERE stock_quantity < min_stock_level';
-        const products = db.prepare(sql).all();
+        const products = await db.prepare(sql).all();
         return res.status(200).json(products);
     } catch (error) {
         console.error(error)
@@ -158,7 +158,7 @@ const getLowStockProducts = async(req,res) =>{
 const getOutOfStockProducts = async(req,res) =>{
     try {
         const sql = 'SELECT * FROM products WHERE stock_quantity = 0';
-        const products = db.prepare(sql).all();
+        const products = await db.prepare(sql).all();
         return res.status(200).json(products);
     } catch (error) {
         console.error(error)
@@ -170,7 +170,7 @@ const getProductsByCategory = async(req,res) =>{
     try {
         const {category_id} = req.params;
         const sql = 'SELECT * FROM products WHERE category_id = ?';
-        const products = db.prepare(sql).all(category_id);
+        const products = await db.prepare(sql).all(category_id);
         return res.status(200).json(products);
     } catch (error) {
         console.error(error)
@@ -182,7 +182,7 @@ const searchProduct = async(req,res) =>{
     try {
         const {name} = req.query;
         const sql = 'SELECT * FROM products WHERE name LIKE ?';
-        const products = db.prepare(sql).all(`%${name}%`);
+        const products = await db.prepare(sql).all(`%${name}%`);
         return res.status(200).json(products);
     } catch (error) {
         console.error(error)

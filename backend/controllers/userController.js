@@ -9,12 +9,9 @@ const login = async (req, res) => {
         if (!email || !password) {
             return res.status(400).json({ status: "failed", message: "All fields are required" });
         }
-        const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
+        const user = await db.prepare('SELECT * FROM users WHERE email = ?').get(email);
         if (!user) {
             return res.status(404).json({ status: "failed", message: "User not found" });
-        }
-        if (!user.is_active) {
-            return res.status(403).json({ status: "failed", message: "Account is deactivated" });
         }
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
@@ -44,16 +41,16 @@ const createUser = async (req, res) => {
         if (!full_name || !email || !password) {
             return res.status(400).json({ status: "failed", message: "All fields are required" });
         }
-        const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(email);
+        const existing = await db.prepare('SELECT id FROM users WHERE email = ?').get(email);
         if (existing) {
             return res.status(400).json({ status: "failed", message: "User already exists" });
         }
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
-        const result = db.prepare(
+        const result = await db.prepare(
             'INSERT INTO users (full_name, email, password, role) VALUES (?, ?, ?, ?)'
         ).run(full_name, email, hashedPassword, role || 'user');
-        const newUser = db.prepare('SELECT id, full_name, email, role, is_active, created_at FROM users WHERE id = ?').get(result.lastInsertRowid);
+        const newUser = await db.prepare('SELECT id, full_name, email, role, is_active, created_at FROM users WHERE id = ?').get(result.lastInsertRowid);
         res.status(201).json({ status: "success", message: "User created successfully", user: newUser });
     } catch (error) {
         console.log(error);
@@ -63,7 +60,7 @@ const createUser = async (req, res) => {
 
 const getUsers = async (req, res) => {
     try {
-        const users = db.prepare('SELECT id, full_name, email, role, is_active, created_at, updated_at FROM users').all();
+        const users = await db.prepare('SELECT id, full_name, email, role, is_active, created_at, updated_at FROM users').all();
         res.status(200).json({ status: "success", users });
     } catch (error) {
         console.log(error);
@@ -74,7 +71,7 @@ const getUsers = async (req, res) => {
 const getUserById = async (req, res) => {
     try {
         const { id } = req.params;
-        const user = db.prepare('SELECT id, full_name, email, role, is_active, created_at, updated_at FROM users WHERE id = ?').get(id);
+        const user = await db.prepare('SELECT id, full_name, email, role, is_active, created_at, updated_at FROM users WHERE id = ?').get(id);
         if (!user) {
             return res.status(404).json({ status: "failed", message: "User not found" });
         }
@@ -89,14 +86,14 @@ const updateUser = async (req, res) => {
     try {
         const { id } = req.params;
         const { full_name, email, role } = req.body;
-        const user = db.prepare('SELECT * FROM users WHERE id = ?').get(id);
+        const user = await db.prepare('SELECT * FROM users WHERE id = ?').get(id);
         if (!user) {
             return res.status(404).json({ status: "failed", message: "User not found" });
         }
-        db.prepare(
+        await db.prepare(
             'UPDATE users SET full_name = ?, email = ?, role = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
         ).run(full_name || user.full_name, email || user.email, role || user.role, id);
-        const updatedUser = db.prepare('SELECT id, full_name, email, role, is_active, updated_at FROM users WHERE id = ?').get(id);
+        const updatedUser = await db.prepare('SELECT id, full_name, email, role, is_active, updated_at FROM users WHERE id = ?').get(id);
         res.status(200).json({ status: "success", message: "User updated successfully", user: updatedUser });
     } catch (error) {
         console.log(error);
@@ -107,11 +104,11 @@ const updateUser = async (req, res) => {
 const deleteUser = async (req, res) => {
     try {
         const { id } = req.params;
-        const user = db.prepare('SELECT id FROM users WHERE id = ?').get(id);
+        const user = await db.prepare('SELECT id FROM users WHERE id = ?').get(id);
         if (!user) {
             return res.status(404).json({ status: "failed", message: "User not found" });
         }
-        db.prepare('DELETE FROM users WHERE id = ?').run(id);
+        await db.prepare('DELETE FROM users WHERE id = ?').run(id);
         res.status(200).json({ status: "success", message: "User deleted successfully" });
     } catch (error) {
         console.log(error);
@@ -126,11 +123,11 @@ const updateUserStatus = async (req, res) => {
         if (is_active === undefined) {
             return res.status(400).json({ status: "failed", message: "is_active field is required" });
         }
-        const user = db.prepare('SELECT id FROM users WHERE id = ?').get(id);
+        const user = await db.prepare('SELECT id FROM users WHERE id = ?').get(id);
         if (!user) {
             return res.status(404).json({ status: "failed", message: "User not found" });
         }
-        db.prepare('UPDATE users SET is_active = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(is_active ? 1 : 0, id);
+        await db.prepare('UPDATE users SET is_active = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(is_active ? 1 : 0, id);
         res.status(200).json({ status: "success", message: "User status updated successfully" });
     } catch (error) {
         console.log(error);
@@ -140,7 +137,7 @@ const updateUserStatus = async (req, res) => {
 
 const getProfile = async (req, res) => {
     try {
-        const user = db.prepare('SELECT id, full_name, email, role, is_active, created_at, updated_at FROM users WHERE id = ?').get(req.user.id);
+        const user = await db.prepare('SELECT id, full_name, email, role, is_active, created_at, updated_at FROM users WHERE id = ?').get(req.user.id);
         if (!user) {
             return res.status(404).json({ status: "failed", message: "User not found" });
         }
@@ -154,20 +151,20 @@ const getProfile = async (req, res) => {
 const updateProfile = async (req, res) => {
     try {
         const { full_name, email } = req.body;
-        const user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id);
+        const user = await db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id);
         if (!user) {
             return res.status(404).json({ status: "failed", message: "User not found" });
         }
         if (email && email !== user.email) {
-            const existing = db.prepare('SELECT id FROM users WHERE email = ? AND id != ?').get(email, req.user.id);
+            const existing = await db.prepare('SELECT id FROM users WHERE email = ? AND id != ?').get(email, req.user.id);
             if (existing) {
                 return res.status(400).json({ status: "failed", message: "Email already in use" });
             }
         }
-        db.prepare(
+        await db.prepare(
             'UPDATE users SET full_name = ?, email = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
         ).run(full_name || user.full_name, email || user.email, req.user.id);
-        const updatedUser = db.prepare('SELECT id, full_name, email, role, is_active, updated_at FROM users WHERE id = ?').get(req.user.id);
+        const updatedUser = await db.prepare('SELECT id, full_name, email, role, is_active, updated_at FROM users WHERE id = ?').get(req.user.id);
         res.status(200).json({ status: "success", message: "Profile updated successfully", user: updatedUser });
     } catch (error) {
         console.log(error);
@@ -184,7 +181,7 @@ const changePassword = async (req, res) => {
         if (new_password !== confirm_password) {
             return res.status(400).json({ status: "failed", message: "New Password and Confirm Password doesn't match" });
         }
-        const user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id);
+        const user = await db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id);
         if (!user) {
             return res.status(404).json({ status: "failed", message: "User not found" });
         }
@@ -194,7 +191,7 @@ const changePassword = async (req, res) => {
         }
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(new_password, salt);
-        db.prepare('UPDATE users SET password = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(hashedPassword, req.user.id);
+        await db.prepare('UPDATE users SET password = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(hashedPassword, req.user.id);
         res.status(200).json({ status: "success", message: "Password changed successfully" });
     } catch (error) {
         console.log(error);
@@ -217,13 +214,13 @@ const forgotPassword = async (req, res) => {
         if (!email) {
             return res.status(400).json({ status: "failed", message: "Email field is required" });
         }
-        const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
+        const user = await db.prepare('SELECT * FROM users WHERE email = ?').get(email);
         if (!user) {
             return res.status(404).json({ status: "failed", message: "Email doesn't exist" });
         }
         const secret = user.id + process.env.JWT_SECRET;
         const token = jwt.sign({ id: user.id }, secret, { expiresIn: '15m' });
-        const link = `http://127.0.0.1:3000/api/users/reset-password/${user.id}/${token}`;
+        const link = `http://localhost:5173/reset-password/${user.id}/${token}`;
         await transporter.sendMail({
             from: process.env.EMAIL_FROM,
             to: user.email,
@@ -241,7 +238,7 @@ const resetPassword = async (req, res) => {
     try {
         const { id, token } = req.params;
         const { password, confirm_password } = req.body;
-        const user = db.prepare('SELECT * FROM users WHERE id = ?').get(id);
+        const user = await db.prepare('SELECT * FROM users WHERE id = ?').get(id);
         if (!user) {
             return res.status(404).json({ status: "failed", message: "User not found" });
         }
@@ -255,14 +252,13 @@ const resetPassword = async (req, res) => {
         }
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
-        db.prepare('UPDATE users SET password = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(hashedPassword, id);
+        await db.prepare('UPDATE users SET password = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(hashedPassword, id);
         res.status(200).json({ status: "success", message: "Password Reset Successfully" });
     } catch (error) {
         console.log(error);
         res.status(400).json({ status: "failed", message: "Invalid or Expired Token" });
     }
 };
-
 
 module.exports = {
     login,

@@ -2,29 +2,29 @@ const db = require('../config/connectDB');
 
 const getDashboardSummary = async (req, res) => {
     try {
-        const totalSales = db.prepare(
-            `SELECT COALESCE(SUM(total),0) as total FROM sales WHERE date(created_at) = date('now','localtime')`
+        const totalSales = await db.prepare(
+            `SELECT COALESCE(SUM(total),0) as total FROM sales`
         ).get();
-        const totalOrders = db.prepare(
-            `SELECT COUNT(*) as count FROM sales WHERE date(created_at) = date('now','localtime')`
+        const totalOrders = await db.prepare(
+            `SELECT COUNT(*) as count FROM sales`
         ).get();
-        const totalProducts = db.prepare(`SELECT COUNT(*) as count FROM products`).get();
-        const lowStockItems = db.prepare(
+        const totalProducts = await db.prepare(`SELECT COUNT(*) as count FROM products`).get();
+        const lowStockItems = await db.prepare(
             `SELECT COUNT(*) as count FROM products WHERE stock_quantity <= min_stock_level`
         ).get();
-        const salesOverview = db.prepare(
+        const salesOverview = await db.prepare(
             `SELECT date(created_at) as date, SUM(total) as total FROM sales
              WHERE date(created_at) >= date('now','localtime','-6 days')
              GROUP BY date(created_at) ORDER BY date(created_at) ASC`
         ).all();
-        const topSelling = db.prepare(
+        const topSelling = await db.prepare(
             `SELECT p.id, p.name, SUM(si.qty) as qty_sold
              FROM sale_items si JOIN products p ON si.product_id = p.id
              JOIN sales s ON si.sale_id = s.id
              WHERE date(s.created_at) >= date('now','localtime','-6 days')
              GROUP BY p.id, p.name ORDER BY qty_sold DESC LIMIT 3`
         ).all();
-        const recentSales = db.prepare(
+        const recentSales = await db.prepare(
             `SELECT invoice_no, created_at, total FROM sales ORDER BY created_at DESC LIMIT 6`
         ).all();
         return res.status(200).json({
@@ -51,19 +51,19 @@ const getSalesReport = async (req, res) => {
             dateFilter = `date(created_at) BETWEEN date(?) AND date(?)`;
             params = [from, to];
         }
-        const summary = db.prepare(
+        const summary = await db.prepare(
             `SELECT COALESCE(SUM(total),0) as total_sales, COUNT(*) as total_orders,
              COALESCE(AVG(total),0) as avg_order_value FROM sales WHERE ${dateFilter}`
         ).get(...params);
-        const totalItems = db.prepare(
+        const totalItems = await db.prepare(
             `SELECT COALESCE(SUM(si.qty),0) as total_items_sold
              FROM sale_items si JOIN sales s ON si.sale_id = s.id WHERE ${dateFilter}`
         ).get(...params);
-        const salesOverview = db.prepare(
+        const salesOverview = await db.prepare(
             `SELECT date(created_at) as date, SUM(total) as total FROM sales
              WHERE ${dateFilter} GROUP BY date(created_at) ORDER BY date(created_at) ASC`
         ).all(...params);
-        const recentSales = db.prepare(
+        const recentSales = await db.prepare(
             `SELECT invoice_no, created_at, total FROM sales
              WHERE ${dateFilter} ORDER BY created_at DESC LIMIT 6`
         ).all(...params);
@@ -84,14 +84,14 @@ const getSalesReport = async (req, res) => {
 const getSingleInvoiceReport = async (req, res) => {
     try {
         const { id } = req.params;
-        const invoice = db.prepare(
+        const invoice = await db.prepare(
             `SELECT id, invoice_no, subtotal, labor_charges, total, paid_amount, change, created_at
              FROM sales WHERE id = ?`
         ).get(id);
         if (!invoice) {
             return res.status(404).json({ message: 'Invoice not found' });
         }
-        const items = db.prepare(
+        const items = await db.prepare(
             `SELECT p.name as product_name, si.qty, si.price, (si.qty * si.price) as item_total
              FROM sale_items si JOIN products p ON si.product_id = p.id WHERE si.sale_id = ?`
         ).all(id);
@@ -104,7 +104,7 @@ const getSingleInvoiceReport = async (req, res) => {
 
 const productSalesReport = async (req, res) => {
     try {
-        const products = db.prepare(
+        const products = await db.prepare(
             `SELECT p.id, p.name, SUM(si.qty) as total_sold
              FROM sale_items si JOIN products p ON si.product_id = p.id
              GROUP BY p.id, p.name ORDER BY total_sold DESC LIMIT 5`
@@ -118,7 +118,7 @@ const productSalesReport = async (req, res) => {
 
 const stockReport = async (req, res) => {
     try {
-        const stock = db.prepare(
+        const stock = await db.prepare(
             `SELECT id, name, stock_quantity, min_stock_level, purchase_price, selling_price,
              CASE WHEN stock_quantity = 0 THEN 'Out of Stock'
                   WHEN stock_quantity <= min_stock_level THEN 'Low Stock'
@@ -134,7 +134,7 @@ const stockReport = async (req, res) => {
 
 const lowStockReport = async (req, res) => {
     try {
-        const lowStock = db.prepare(
+        const lowStock = await db.prepare(
             `SELECT id, name, stock_quantity, min_stock_level, purchase_price, selling_price
              FROM products WHERE stock_quantity <= min_stock_level AND stock_quantity > 0
              ORDER BY stock_quantity ASC`
@@ -148,7 +148,7 @@ const lowStockReport = async (req, res) => {
 
 const outOfStockReport = async (req, res) => {
     try {
-        const outOfStock = db.prepare(
+        const outOfStock = await db.prepare(
             `SELECT id, name, stock_quantity, purchase_price, selling_price
              FROM products WHERE stock_quantity = 0`
         ).all();
@@ -161,7 +161,7 @@ const outOfStockReport = async (req, res) => {
 
 const returnsReport = async (req, res) => {
     try {
-        const returns = db.prepare(
+        const returns = await db.prepare(
             `SELECT r.id, r.return_no, r.sale_id, s.invoice_no, r.total_refund, r.reason, r.created_at
              FROM returns r JOIN sales s ON r.sale_id = s.id ORDER BY r.created_at DESC`
         ).all();
@@ -181,7 +181,7 @@ const profitReport = async (req, res) => {
             dateFilter = `date(s.created_at) BETWEEN date(?) AND date(?)`;
             params = [from, to];
         }
-        const result = db.prepare(
+        const result = await db.prepare(
             `SELECT
 (
     SELECT COALESCE(SUM(total),0)
@@ -196,7 +196,7 @@ WHERE ${dateFilter}`
         ).get(...params);
         const total_profit = result.total_revenue - result.total_cost;
         const profit_margin = result.total_revenue > 0 ? (total_profit / result.total_revenue) * 100 : 0;
-        const monthly = db.prepare(
+        const monthly = await db.prepare(
             `SELECT strftime('%Y-%m', s.created_at) as month,
              SUM(s.total) as revenue,
              SUM(s.total) - SUM(p.purchase_price * si.qty) as profit
@@ -219,7 +219,7 @@ WHERE ${dateFilter}`
 
 const monthlySalesReport = async (req, res) => {
     try {
-        const monthlySales = db.prepare(
+        const monthlySales = await db.prepare(
             `SELECT strftime('%Y-%m', created_at) as month, SUM(total) as total_sales
              FROM sales GROUP BY month ORDER BY month DESC`
         ).all();
@@ -232,7 +232,7 @@ const monthlySalesReport = async (req, res) => {
 
 const topSellingProductsReport = async (req, res) => {
     try {
-        const topSellingProducts = db.prepare(
+        const topSellingProducts = await db.prepare(
             `SELECT p.id, p.name, SUM(si.qty) as total_sold
              FROM sale_items si JOIN products p ON si.product_id = p.id
              GROUP BY p.id, p.name ORDER BY total_sold DESC LIMIT 10`
@@ -246,7 +246,7 @@ const topSellingProductsReport = async (req, res) => {
 
 const dailySalesReport = async (req, res) => {
     try {
-        const dailySales = db.prepare(
+        const dailySales = await db.prepare(
             `SELECT date(created_at) as date, SUM(total) as total_sales
              FROM sales GROUP BY date ORDER BY date DESC`
         ).all();
@@ -259,7 +259,7 @@ const dailySalesReport = async (req, res) => {
 
 const categoryWiseSalesReport = async (req, res) => {
     try {
-        const categoryWiseSales = db.prepare(
+        const categoryWiseSales = await db.prepare(
             `SELECT c.id, c.name, SUM(si.qty) as total_sold
              FROM sale_items si JOIN products p ON si.product_id = p.id
              JOIN categories c ON p.category_id = c.id
@@ -274,7 +274,7 @@ const categoryWiseSalesReport = async (req, res) => {
 
 const inventoryValueReport = async (req, res) => {
     try {
-        const inventoryValue = db.prepare(
+        const inventoryValue = await db.prepare(
             `SELECT SUM(stock_quantity * purchase_price) as total_inventory_value FROM products`
         ).get();
         return res.status(200).json(inventoryValue);
