@@ -21,9 +21,28 @@ const navItems = [
       { label: "Categories", path: "/admin/products/categories" },
     ],
   },
-  { label: "Sales", icon: ShoppingCart, path: "/admin/sales" },
-  { label: "Reports", icon: ClipboardList, path: "/admin/reports" },
-  { label: "User", icon: User, path: "/admin/profile" },
+  {
+    label: "Sales",
+    icon: ShoppingCart,
+    path: "/admin/sales",
+    children: [
+      { label: "Sales History", path: "/admin/sales/history" },
+      { label: "Returns/Refunds", path: "/admin/sales/returns" },
+    ],
+  },
+  {
+    label: "Reports",
+    icon: ClipboardList,
+    path: "/admin/reports",
+    children: [
+      { label: "Sales Report", path: "/admin/reports/sales" },
+      { label: "Product Report", path: "/admin/reports/products" },
+      { label: "Profit Report", path: "/admin/reports/profit" },
+      { label: "Stock Report", path: "/admin/reports/stock" },
+    ],
+  },
+  // In AdminSidebar.jsx
+{ label: "User", icon: User, path: "/admin/user" },
 ];
 
 const AdminSidebar = () => {
@@ -31,7 +50,6 @@ const AdminSidebar = () => {
   const navigate = useNavigate();
   const [expanded, setExpanded] = useState({});
 
-  // Auto-expand a parent if the current route is inside one of its children
   useEffect(() => {
     const next = {};
     navItems.forEach((item) => {
@@ -51,7 +69,6 @@ const AdminSidebar = () => {
 
   return (
     <aside className="w-[260px] shrink-0 bg-[#151B26] flex flex-col justify-between py-6 min-h-[calc(100vh-90px)]">
-      {/* Navigation Links */}
       <nav className="px-4 flex flex-col gap-2">
         {navItems.map(({ label, icon: Icon, path, children }) => {
           const isParentActive = location.pathname.startsWith(path);
@@ -79,7 +96,7 @@ const AdminSidebar = () => {
               <button
                 onClick={() => {
                   toggleExpand(label);
-                  navigate(path);
+                  navigate(path)
                 }}
                 className={`flex items-center gap-3.5 px-4 py-3 rounded-lg text-sm font-semibold transition w-full text-left ${
                   isParentActive
@@ -94,18 +111,13 @@ const AdminSidebar = () => {
               {isOpen && (
                 <div className="mt-1 ml-5 pl-4 border-l border-white/10 flex flex-col gap-1">
                   {children.map((child) => {
-                    const isChildActive = location.pathname === child.path ||
-                      (child.path !== "/admin/products" && location.pathname.startsWith(child.path)) ||
-                      (child.path === "/admin/products" && location.pathname === "/admin/products");
-
+                    const isChildActive = location.pathname === child.path;
                     return (
                       <NavLink
                         key={child.path}
                         to={child.path}
                         className={`flex items-center gap-2.5 px-3 py-2 rounded-md text-xs font-medium transition ${
-                          isChildActive
-                            ? "text-white"
-                            : "text-slate-400 hover:text-white"
+                          isChildActive ? "text-white" : "text-slate-400 hover:text-white"
                         }`}
                       >
                         <span
@@ -124,14 +136,12 @@ const AdminSidebar = () => {
         })}
       </nav>
 
-      {/* Decorative Assets & POS Switch */}
       <div className="px-4 flex flex-col gap-6 items-center">
         <img
           src={carImg}
           alt="ATR Asset"
           className="w-full max-w-[210px] object-contain drop-shadow-xl pointer-events-none select-none"
         />
-
         <button
           onClick={() => navigate("/")}
           className="w-full flex items-center justify-center gap-2 bg-transparent border border-white/20 rounded-lg py-2.5 text-white text-xs font-semibold hover:bg-white/10 transition"
