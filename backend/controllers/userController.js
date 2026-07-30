@@ -161,9 +161,23 @@ const updateProfile = async (req, res) => {
                 return res.status(400).json({ status: "failed", message: "Email already in use" });
             }
         }
+
+        // --- Log audit history ---
+        if (full_name && full_name !== user.full_name) {
+            await db.prepare(
+                'INSERT INTO profile_change_history (user_id, change_type, old_value, new_value) VALUES (?, ?, ?, ?)'
+            ).run(req.user.id, 'Username Changed', user.full_name, full_name);
+        }
+        if (email && email !== user.email) {
+            await db.prepare(
+                'INSERT INTO profile_change_history (user_id, change_type, old_value, new_value) VALUES (?, ?, ?, ?)'
+            ).run(req.user.id, 'Email Changed', user.email, email);
+        }
+
         await db.prepare(
             'UPDATE users SET full_name = ?, email = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
         ).run(full_name || user.full_name, email || user.email, req.user.id);
+
         const updatedUser = await db.prepare('SELECT id, full_name, email, role, is_active, updated_at FROM users WHERE id = ?').get(req.user.id);
         res.status(200).json({ status: "success", message: "Profile updated successfully", user: updatedUser });
     } catch (error) {
@@ -191,7 +205,13 @@ const changePassword = async (req, res) => {
         }
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(new_password, salt);
+        
         await db.prepare('UPDATE users SET password = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(hashedPassword, req.user.id);
+
+        await db.prepare(
+            'INSERT INTO profile_change_history (user_id, change_type, old_value, new_value) VALUES (?, ?, NULL, NULL)'
+        ).run(req.user.id, 'Password Changed');
+
         res.status(200).json({ status: "success", message: "Password changed successfully" });
     } catch (error) {
         console.log(error);
@@ -260,6 +280,19 @@ const resetPassword = async (req, res) => {
     }
 };
 
+const getChangeHistory = async (req, res) => {
+    try {
+        const history = await db.prepare(
+            'SELECT * FROM profile_change_history WHERE user_id = ? ORDER BY created_at DESC LIMIT 10'
+        ).all(req.user.id);
+
+        res.status(200).json({ status: "success", history });
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({ status: "failed", message: "Failed to fetch change history" });
+    }
+};
+
 module.exports = {
     login,
     createUser,
@@ -273,5 +306,6 @@ module.exports = {
     changePassword,
     logout,
     forgotPassword,
-    resetPassword
+    resetPassword,
+    getChangeHistory
 };

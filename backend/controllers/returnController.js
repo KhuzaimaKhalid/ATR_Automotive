@@ -28,13 +28,16 @@ const getReturnById = async (req, res) => {
 
         const returnData = await db.prepare(`
             SELECT
-    p.name,
-    ri.qty,
-    ri.price,
-    (ri.qty * ri.price) AS total
-FROM return_items ri
-JOIN products p ON ri.product_id = p.id
-WHERE ri.return_id = ?
+                r.id,
+                r.return_no,
+                r.sale_id,
+                s.invoice_no,
+                r.total_refund,
+                r.reason,
+                r.created_at
+            FROM returns r
+            JOIN sales s ON r.sale_id = s.id
+            WHERE r.id = ?
         `).get(id);
 
         if (!returnData) {

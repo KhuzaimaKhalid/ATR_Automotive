@@ -104,11 +104,21 @@ const getSingleInvoiceReport = async (req, res) => {
 
 const productSalesReport = async (req, res) => {
     try {
+        const { from, to } = req.query;
+        let dateFilter = `date(s.created_at) >= date('now','localtime','-6 days')`;
+        let params = [];
+        if (from && to) {
+            dateFilter = `date(s.created_at) BETWEEN date(?) AND date(?)`;
+            params = [from, to];
+        }
         const products = await db.prepare(
             `SELECT p.id, p.name, SUM(si.qty) as total_sold
-             FROM sale_items si JOIN products p ON si.product_id = p.id
+             FROM sale_items si
+             JOIN products p ON si.product_id = p.id
+             JOIN sales s ON si.sale_id = s.id
+             WHERE ${dateFilter}
              GROUP BY p.id, p.name ORDER BY total_sold DESC LIMIT 5`
-        ).all();
+        ).all(...params);
         return res.status(200).json(products);
     } catch (error) {
         console.error(error);
@@ -119,11 +129,13 @@ const productSalesReport = async (req, res) => {
 const stockReport = async (req, res) => {
     try {
         const stock = await db.prepare(
-            `SELECT id, name, stock_quantity, min_stock_level, purchase_price, selling_price,
-             CASE WHEN stock_quantity = 0 THEN 'Out of Stock'
-                  WHEN stock_quantity <= min_stock_level THEN 'Low Stock'
+           `SELECT p.id, p.name, p.stock_quantity, p.min_stock_level, p.purchase_price, p.selling_price, c.name as category_name,
+             CASE WHEN p.stock_quantity = 0 THEN 'Out of Stock'
+                  WHEN p.stock_quantity <= p.min_stock_level THEN 'Low Stock'
                   ELSE 'In Stock' END as stock_status
-             FROM products ORDER BY stock_quantity ASC`
+             FROM products p
+             LEFT JOIN categories c ON p.category_id = c.id
+             ORDER BY p.stock_quantity ASC`
         ).all();
         return res.status(200).json(stock);
     } catch (error) {
@@ -177,10 +189,15 @@ const profitReport = async (req, res) => {
         const { from, to } = req.query;
         let dateFilter = `1=1`;
         let params = [];
+        let queryParams = [];
+
         if (from && to) {
             dateFilter = `date(s.created_at) BETWEEN date(?) AND date(?)`;
             params = [from, to];
+            // Since dateFilter is used twice in the first query, duplicate params for both occurrences
+            queryParams = [from, to, from, to];
         }
+
         const result = await db.prepare(
             `SELECT
 (
@@ -193,9 +210,11 @@ FROM sale_items si
 JOIN sales s ON s.id = si.sale_id
 JOIN products p ON si.product_id = p.id
 WHERE ${dateFilter}`
-        ).get(...params);
+        ).get(...queryParams); // <-- Pass queryParams (4 items) here
+
         const total_profit = result.total_revenue - result.total_cost;
         const profit_margin = result.total_revenue > 0 ? (total_profit / result.total_revenue) * 100 : 0;
+
         const monthly = await db.prepare(
             `SELECT strftime('%Y-%m', s.created_at) as month,
              SUM(s.total) as revenue,
@@ -203,7 +222,8 @@ WHERE ${dateFilter}`
              FROM sales s JOIN sale_items si ON s.id = si.sale_id
              JOIN products p ON si.product_id = p.id
              WHERE ${dateFilter} GROUP BY month ORDER BY month ASC`
-        ).all(...params);
+        ).all(...params); // <-- Standard 2 params here
+
         return res.status(200).json({
             total_revenue: result.total_revenue,
             total_cost: result.total_cost,
@@ -216,7 +236,6 @@ WHERE ${dateFilter}`
         return res.status(500).json({ message: 'Server error' });
     }
 }
-
 const monthlySalesReport = async (req, res) => {
     try {
         const monthlySales = await db.prepare(
@@ -259,12 +278,22 @@ const dailySalesReport = async (req, res) => {
 
 const categoryWiseSalesReport = async (req, res) => {
     try {
+        const { from, to } = req.query;
+        let dateFilter = `date(s.created_at) >= date('now','localtime','-6 days')`;
+        let params = [];
+        if (from && to) {
+            dateFilter = `date(s.created_at) BETWEEN date(?) AND date(?)`;
+            params = [from, to];
+        }
         const categoryWiseSales = await db.prepare(
             `SELECT c.id, c.name, SUM(si.qty) as total_sold
-             FROM sale_items si JOIN products p ON si.product_id = p.id
+             FROM sale_items si
+             JOIN products p ON si.product_id = p.id
              JOIN categories c ON p.category_id = c.id
+             JOIN sales s ON si.sale_id = s.id
+             WHERE ${dateFilter}
              GROUP BY c.id, c.name ORDER BY total_sold DESC`
-        ).all();
+        ).all(...params);
         return res.status(200).json(categoryWiseSales);
     } catch (error) {
         console.error(error);
