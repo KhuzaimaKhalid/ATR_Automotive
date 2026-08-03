@@ -9,82 +9,83 @@ const generateInvoiceNo = async () => {
 
 const createSale = async (req, res) => {
     try {
-        const { items, labor_charges, paid_amount } = req.body;
-        if (!items || !Array.isArray(items) || items.length === 0) {
-            return res.status(400).json({ message: 'Please provide sale items' });
-        }
-        if (paid_amount === undefined) {
-            return res.status(400).json({ message: 'Please provide paid amount' });
-        }
-
-        let subtotal = 0;
+      const { items, labor_charges, paid_amount } = req.body;
+  
+      if (!Array.isArray(items) || items.length === 0) {
+        return res.status(400).json({ message: "Cart items cannot be empty." });
+      }
+  
+      // Ensure numeric inputs fallback safely to 0 (prevents NaN)
+      const labor = Number(labor_charges) || 0;
+      const paid = Number(paid_amount) || 0;
+  
+      // Calculate subtotal safely
+      const subtotal = items.reduce((sum, item) => {
+        const price = Number(item.price) || 0;
+        const qty = Number(item.qty) || 0;
+        return sum + (qty * price);
+      }, 0);
+  
+      const total = subtotal + labor;
+  
+      if (paid < total) {
+        return res.status(400).json({ message: "Paid amount is less than total." });
+      }
+  
+      const change = Math.max(0, paid - total);
+      const invoice_no = `INV-${Date.now()}`;
+      const createdBy = req.user?.id || null;
+  
+      // Execute database operations
+      const transaction = db.transaction(async (txDb) => {
+        const saleResult = await txDb.prepare(
+          'INSERT INTO sales (invoice_no, subtotal, labor_charges, total, paid_amount, change, created_by) VALUES (?,?,?,?,?,?,?)'
+        ).run(
+          invoice_no, 
+          Number(subtotal) || 0, 
+          Number(labor) || 0, 
+          Number(total) || 0, 
+          Number(paid) || 0, 
+          Number(change) || 0, 
+          createdBy
+        );
+  
+        const sale_id = Number(saleResult.lastInsertRowid);
+  
         for (const item of items) {
-            const product = await db.prepare(
-                "SELECT stock_quantity FROM products WHERE id = ?"
-            ).get(item.product_id);
-
-            if (!product) {
-                return res.status(404).json({ message: "Product not found" });
-            }
-
-            if (item.qty > product.stock_quantity) {
-                return res.status(400).json({
-                    message: "Insufficient stock"
-                });
-            }
-            if (!item.product_id || !item.qty || !item.price) {
-                return res.status(400).json({ message: 'Each item must have product_id, qty and price' });
-            }
-            subtotal += item.qty * item.price;
+          const itemQty = Number(item.qty) || 0;
+          const itemPrice = Number(item.price) || 0;
+  
+          await txDb.prepare(
+            'INSERT INTO sale_items (sale_id, product_id, qty, price) VALUES (?,?,?,?)'
+          ).run(sale_id, item.product_id, itemQty, itemPrice);
+  
+          await txDb.prepare(
+            'UPDATE products SET stock_quantity = stock_quantity - ? WHERE id = ?'
+          ).run(itemQty, item.product_id);
         }
-
-        const labor = labor_charges || 0;
-        const total = subtotal + labor;
-        const change = paid_amount - total;
-
-        if (change < 0) {
-            return res.status(400).json({ message: 'Paid amount is less than total' });
-        }
-
-        const invoice_no = await generateInvoiceNo();
-
-        const transaction = db.transaction(async (txDb) => {
-            const saleResult = await txDb.prepare(
-                'INSERT INTO sales (invoice_no, subtotal, labor_charges, total, paid_amount, change, created_by) VALUES (?,?,?,?,?,?,?)'
-            ).run(invoice_no, subtotal, labor, total, paid_amount, change, req.user?.id);
-
-            const sale_id = saleResult.lastInsertRowid;
-
-            for (const item of items) {
-                await txDb.prepare(
-                    'INSERT INTO sale_items (sale_id, product_id, qty, price) VALUES (?,?,?,?)'
-                ).run(sale_id, item.product_id, item.qty, item.price);
-
-                await txDb.prepare(
-                    'UPDATE products SET stock_quantity = stock_quantity - ? WHERE id = ?'
-                ).run(item.qty, item.product_id);
-            }
-
-            return sale_id;
-        });
-
-        const sale_id = await transaction();
-
-        return res.status(201).json({
-            message: 'Sale created successfully',
-            sale_id,
-            invoice_no,
-            subtotal,
-            labor_charges: labor,
-            total,
-            paid_amount,
-            change
-        });
+  
+        return sale_id;
+      });
+  
+      const sale_id = await transaction();
+  
+      return res.status(201).json({
+        message: 'Sale created successfully',
+        sale_id,
+        invoice_no,
+        subtotal,
+        labor_charges: labor,
+        total,
+        paid_amount: paid,
+        change
+      });
+  
     } catch (error) {
-        console.error(error);
-        return res.status(500).json({ message: 'Server error', error: error.message });
+      console.error("Error creating sale:", error);
+      return res.status(500).json({ message: "Failed to create sale" });
     }
-}
+  };
 
 const getAllSales = async (req, res) => {
     try {
