@@ -1,4 +1,33 @@
 @import "tailwindcss";
+
+/* Hide standard UI elements when printing */
+@media print {
+  /* Hide headers, sidebars, product grid, navigation, and buttons */
+  header, 
+  aside, 
+  nav, 
+  .no-print,
+  button {
+    display: none !important;
+  }
+
+  /* Make background clean white and clear layout bounds */
+  body, html {
+    background: #fff !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Print thermal-receipt container styling */
+  .printable-receipt {
+    display: block !important;
+    width: 80mm; /* Standard thermal receipt size (e.g., 80mm / 3 inch) */
+    padding: 10px;
+    font-family: monospace;
+    color: #000;
+  }
+}
+
 :root {
   --text: #6b6375;
   --text-h: #08060d;
