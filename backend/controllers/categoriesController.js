@@ -11,7 +11,8 @@ const createCategories = async (req, res) => {
 
         const blob = await put(`categories/${Date.now()}-${req.file.originalname}`, req.file.buffer, {
             access: 'public',
-            addRandomSuffix: true 
+            addRandomSuffix: true,
+            token: process.env.BLOB_READ_WRITE_TOKEN
         });
 
         const sql = 'INSERT INTO categories (name, image) VALUES (?, ?)';
@@ -43,7 +44,7 @@ const updateCategory = async (req, res) => {
         let imageUrl = existing.image;
         if (req.file) {
             if (existing.image && existing.image.includes('blob.vercel-storage.com')) {
-                await del(existing.image);
+                await del(existing.image, { token: process.env.BLOB_READ_WRITE_TOKEN });
             }
             const blob = await put(`categories/${Date.now()}-${req.file.originalname}`, req.file.buffer, {
                 access: 'public',
@@ -100,7 +101,7 @@ const deleteCategory = async (req, res) => {
             return res.status(404).json({ message: "Category not found" });
         }
         if (category.image && category.image.includes('blob.vercel-storage.com')) {
-            await del(category.image);
+            await del(category.image, { token: process.env.BLOB_READ_WRITE_TOKEN });
         }
         await db.prepare('DELETE FROM categories WHERE id = ?').run(id);
         return res.status(200).json({ message: "Category deleted successfully" });

@@ -14,6 +14,7 @@ const createProduct = async (req, res) => {
       if (req.file) {
         const blob = await put(`products/${Date.now()}-${req.file.originalname}`, req.file.buffer, {
           access: 'public',
+          token: process.env.BLOB_READ_WRITE_TOKEN
         });
         imageUrl = blob.url;
       }
@@ -63,6 +64,7 @@ const updateProduct = async (req, res) => {
             }
             const blob = await put(`products/${Date.now()}-${req.file.originalname}`, req.file.buffer, {
                 access: 'public',
+                token: process.env.BLOB_READ_WRITE_TOKEN
             });
             imageUrl = blob.url;
         }
