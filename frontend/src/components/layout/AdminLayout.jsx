@@ -1,4 +1,4 @@
-import AdminHeader from "./adminHeader";
+import AdminHeader from "./AdminHeader";
 import AdminSidebar from "./AdminSidebar";
 
 const AdminLayout = ({ children }) => {

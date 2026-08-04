@@ -3,7 +3,7 @@ import { Search, Calendar, Eye } from "lucide-react";
 import api from "../../services/api";
 import AdminLayout from "../../components/layout/AdminLayout";
 import wheelImg from "../../assets/wheel.png";
-import InvoiceModal from "../../components/sales/InvoiceMOdal";
+import InvoiceModal from "../../components/sales/InvoiceModal";
 
 const PAGE_SIZE = 8;
 
