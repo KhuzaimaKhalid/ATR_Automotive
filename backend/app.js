@@ -30,6 +30,10 @@ app.use("/api/sales", salesRoutes);
 app.use("/api/report", reportRoutes);
 app.use("/api/return", returnRoutes);
 
-app.listen(PORT, () => {
-    console.log(`Listening on ${PORT}`);
-});
+if (process.env.NODE_ENV !== 'production') {
+    app.listen(PORT || 5000, () => {
+        console.log(`Listening on ${PORT || 5000}`);
+    });
+}
+
+module.exports = app;
