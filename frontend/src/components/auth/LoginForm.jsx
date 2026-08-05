@@ -136,6 +136,17 @@ const LoginForm = () => {
             <line x1="15" y1="12" x2="3" y2="12" />
           </svg>
         </button>
+
+        {/* Signup Link */}
+        <div className="text-center text-sm text-slate-500 pt-2">
+          Don't have an account?{" "}
+          <Link
+            to="/signup"
+            className="font-semibold text-red-600 hover:text-red-700"
+          >
+            Sign Up
+          </Link>
+        </div>
       </form>
     </div>
   );
