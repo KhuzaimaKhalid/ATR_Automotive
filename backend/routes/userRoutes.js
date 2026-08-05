@@ -22,6 +22,7 @@ const adminMiddleware = require('../middlewares/adminMiddleware');
 
 // Public routes
 router.post('/login', login);
+router.post('/register', createUser); // <--- Add public signup endpoint
 router.post('/forgot-password', forgotPassword);
 router.put('/reset-password/:id/:token', resetPassword);
 
@@ -36,7 +37,7 @@ router.post('/logout', authMiddleware, logout);
 router.post('/', authMiddleware, adminMiddleware, createUser);
 router.get('/', authMiddleware, adminMiddleware, getUsers);
 
-// Dynamic ID routes (keep at the bottom)
+// Dynamic ID routes
 router.get('/:id', authMiddleware, adminMiddleware, getUserById);
 router.put('/:id', authMiddleware, adminMiddleware, updateUser);
 router.delete('/:id', authMiddleware, adminMiddleware, deleteUser);
