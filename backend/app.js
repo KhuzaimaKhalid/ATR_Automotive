@@ -13,10 +13,24 @@ const returnRoutes = require("./routes/returnRoutes");
 
 const app = express();
 
-app.use(cors({
-    origin: ["https://atr-automotive-vdkp-ruddy.vercel.app", "http://localhost:5173"],
-    credentials: true
-  }));
+const allowedOrigins = [
+    "https://atr-automotive-vdkp-ruddy.vercel.app",
+    "http://localhost:5173",
+    "file://"
+  ];
+  
+  app.use(
+    cors({
+      origin: function (origin, callback) {
+        if (!origin || allowedOrigins.includes(origin) || origin.startsWith("file://")) {
+          return callback(null, true);
+        }
+        return callback(new Error("Not allowed by CORS"));
+      },
+      credentials: true,
+    })
+  );
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
