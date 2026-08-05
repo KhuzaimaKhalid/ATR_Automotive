@@ -2,12 +2,22 @@ import api from "./api";
 
 const login = async (email, password) => {
   const response = await api.post("/user/login", { email, password });
-  return response.data; // { status, message, token, user }
+  return response.data;
+};
+
+const register = async (full_name, email, password) => {
+  const response = await api.post("/user/register", {
+    full_name,
+    email,
+    password,
+    role: "user",
+  });
+  return response.data;
 };
 
 const forgotPassword = async (email) => {
   const response = await api.post("/user/forgot-password", { email });
-  return response.data; // { status, message }
+  return response.data;
 };
 
 const resetPassword = async (id, token, password, confirm_password) => {
@@ -15,7 +25,7 @@ const resetPassword = async (id, token, password, confirm_password) => {
     password,
     confirm_password,
   });
-  return response.data; // { status, message }
+  return response.data;
 };
 
 const logout = async () => {
@@ -27,6 +37,6 @@ const logout = async () => {
   }
 };
 
-const authService = { login, forgotPassword, resetPassword, logout };
+const authService = { login, register, forgotPassword, resetPassword, logout };
 
 export default authService;

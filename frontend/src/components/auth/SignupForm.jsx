@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { useAuth } from "../../context/AuthContext";
+import authService from "../../services/authService";
 
-const LoginForm = () => {
-  const { login } = useAuth();
+const SignupForm = () => {
   const navigate = useNavigate();
 
+  const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -16,18 +16,18 @@ const LoginForm = () => {
     e.preventDefault();
     setError("");
 
-    if (!email || !password) {
-      setError("Please enter both email and password");
+    if (!fullName || !email || !password) {
+      setError("All fields are required");
       return;
     }
 
     setLoading(true);
     try {
-      const data = await login(email, password);
+      const data = await authService.register(fullName, email, password);
       if (data?.status === "success") {
-        navigate("/dashboard");
+        navigate("/login");
       } else {
-        setError(data?.message || "Login failed");
+        setError(data?.message || "Registration failed");
       }
     } catch (err) {
       setError(
@@ -42,10 +42,10 @@ const LoginForm = () => {
     <div className="w-[460px] max-w-full bg-slate-50/95 backdrop-blur-md rounded-[32px] p-10 md:p-12 shadow-2xl border border-white/20 flex flex-col justify-center min-h-[580px]">
       <div className="mb-8">
         <h2 className="text-3xl font-extrabold text-slate-900">
-          Admin <span className="text-red-600">Login</span>
+          Create <span className="text-red-600">Account</span>
         </h2>
         <p className="text-sm text-slate-500 mt-2">
-          Welcome back! Please login to continue.
+          Sign up to get started with ATR Automotive.
         </p>
       </div>
 
@@ -58,15 +58,27 @@ const LoginForm = () => {
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label className="flex items-center gap-2 text-sm font-medium text-slate-800 mb-1.5">
-            Email / Username
+            Full Name
           </label>
           <input
             type="text"
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
+            placeholder="Enter your full name"
+            className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-transparent"
+          />
+        </div>
+
+        <div>
+          <label className="flex items-center gap-2 text-sm font-medium text-slate-800 mb-1.5">
+            Email Address
+          </label>
+          <input
+            type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="Enter your email"
             className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-transparent"
-            autoComplete="username"
           />
         </div>
 
@@ -81,7 +93,6 @@ const LoginForm = () => {
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Enter your password"
               className="w-full rounded-lg border border-slate-300 px-3 py-2.5 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-transparent"
-              autoComplete="current-password"
             />
             <button
               type="button"
@@ -94,31 +105,25 @@ const LoginForm = () => {
           </div>
         </div>
 
-        <div className="flex justify-between items-center text-sm">
-          <Link
-            to="/forgot-password"
-            className="font-medium text-red-600 hover:text-red-700"
-          >
-            Forgot Password?
-          </Link>
-          <Link
-            to="/signup"
-            className="font-medium text-slate-700 hover:text-red-600"
-          >
-            Create Account
-          </Link>
-        </div>
-
         <button
           type="submit"
           disabled={loading}
-          className="w-full flex items-center justify-center gap-2 bg-red-600 text-white text-sm font-semibold py-3 rounded-lg hover:bg-red-700 transition disabled:opacity-60 disabled:cursor-not-allowed"
+          className="w-full flex items-center justify-center gap-2 bg-red-600 text-white text-sm font-semibold py-3 rounded-lg hover:bg-red-700 transition disabled:opacity-60 disabled:cursor-not-allowed mt-2"
         >
-          {loading ? "Logging in..." : "Login"}
+          {loading ? "Creating Account..." : "Sign Up"}
         </button>
+
+        <div className="text-center pt-2">
+          <p className="text-sm text-slate-600">
+            Already have an account?{" "}
+            <Link to="/login" className="font-semibold text-red-600 hover:text-red-700">
+              Login
+            </Link>
+          </p>
+        </div>
       </form>
     </div>
   );
 };
 
-export default LoginForm;
+export default SignupForm;

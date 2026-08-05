@@ -22,19 +22,20 @@ import ProfitReportPage from "../pages/admin/ProfitReportPage";
 import StockReportPage from "../pages/admin/StockReportPage";
 import UserProfilePage from "../pages/admin/UserProfilePage";
 import POSPage from "../pages/pos/POSPage";
+import SignupPage from "../pages/SignupPage";
 
 // 1. IMPORT YOUR POS RETURNS COMPONENT HERE
-import POSReturnsPage from "../pages/pos/ReturnsPage"; 
+import POSReturnsPage from "../pages/pos/ReturnsPage";
 
 const AppRoutes = () => {
   return (
     <Routes>
       {/* Public Routes */}
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/signup" element={<SignupPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password/:id/:token" element={<ResetPasswordPage />} />
       <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
-
       {/* Protected Routes for All Logged-In Users */}
       <Route element={<ProtectedRoute />}>
         {/* Dynamic Entry Points: Directs 'admin' to Dashboard and 'user' to POS */}

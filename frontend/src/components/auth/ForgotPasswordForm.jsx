@@ -27,9 +27,12 @@ const ForgotPasswordForm = ({ onEmailSent }) => {
         setError(data.message || "Something went wrong");
       }
     } catch (err) {
-      // Fallback state for visual testing
-      setIsSubmitted(true);
-      if (onEmailSent) onEmailSent();
+      // Correctly capture and display the API error message
+      setError(
+        err.response?.data?.message || 
+        err.message || 
+        "Failed to send reset email. Please try again."
+      );
     } finally {
       setLoading(false);
     }

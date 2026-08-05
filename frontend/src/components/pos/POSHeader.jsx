@@ -1,4 +1,4 @@
-import { Clock, Search } from "lucide-react";
+import { Clock, Search, LogOut } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import useLiveClock from "../../hooks/useLiveClock";
 import logo from "../../assets/logo.png";
@@ -7,8 +7,15 @@ const POSHeader = ({ searchTerm, onSearchChange }) => {
   const { time, day, date } = useLiveClock();
   const navigate = useNavigate();
 
+  const handleLogout = () => {
+    // Optional: Clear tokens or session storage here if applicable
+    // localStorage.removeItem("token");
+    navigate("/login"); // Redirect to login page
+  };
+
   return (
     <header className="w-full h-[90px] bg-white border-b border-black/20 flex items-center justify-between px-8 shrink-0 gap-6">
+      {/* Logo & Branding */}
       <div className="flex items-center gap-3 shrink-0">
         <img src={logo} alt="ATR Logo" className="w-12 h-12 object-contain" />
         <div className="flex items-baseline gap-2 leading-none">
@@ -21,6 +28,7 @@ const POSHeader = ({ searchTerm, onSearchChange }) => {
         </div>
       </div>
 
+      {/* Search Input */}
       <div className="relative flex-1 max-w-[500px]">
         <input
           type="text"
@@ -32,6 +40,7 @@ const POSHeader = ({ searchTerm, onSearchChange }) => {
         <Search size={18} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
       </div>
 
+      {/* Live Clock */}
       <div className="hidden md:flex items-center gap-3 pl-6 border-l border-black/20 shrink-0">
         <Clock size={24} className="text-black/80" strokeWidth={1.8} />
         <div className="leading-tight">
@@ -41,17 +50,21 @@ const POSHeader = ({ searchTerm, onSearchChange }) => {
         </div>
       </div>
 
+      {/* Footer Info & Logout Button */}
       <div className="flex items-center gap-6 shrink-0">
         <div className="text-right leading-tight hidden lg:block">
           <p className="text-[10px] font-bold text-black/60 tracking-wider">POWERED BY</p>
           <p className="text-xs font-extrabold text-[#CD051F]">TRUST NEXUS</p>
           <p className="text-[11px] font-medium text-black/80">0303-8184136</p>
         </div>
+
+        {/* LOGOUT BUTTON */}
         <button
-          onClick={() => navigate("/admin/dashboard")}
-          className="bg-[#CD051F] hover:bg-red-700 text-white text-xs font-extrabold px-4 py-2 rounded-md transition shadow-sm"
+          onClick={handleLogout}
+          className="bg-[#CD051F] hover:bg-red-700 text-white text-xs font-extrabold px-4 py-2.5 rounded-md transition shadow-sm flex items-center gap-1.5"
         >
-          ADMIN LOGIN
+          <LogOut size={14} />
+          LOGOUT
         </button>
       </div>
     </header>
