@@ -41,11 +41,22 @@ app.get("/", (req, res) => {
 });
 
 app.use("/api/user", userRoutes);
+app.use("/user", userRoutes);
+
 app.use("/api/categories", categoriesRoutes);
+app.use("/categories", categoriesRoutes);
+
 app.use("/api/product", productRoutes);
+app.use("/product", productRoutes);
+
 app.use("/api/sales", salesRoutes);
+app.use("/sales", salesRoutes);
+
 app.use("/api/report", reportRoutes);
+app.use("/report", reportRoutes);
+
 app.use("/api/return", returnRoutes);
+app.use("/return", returnRoutes);
 
 if (process.env.NODE_ENV !== 'production') {
     app.listen(PORT || 5000, () => {
