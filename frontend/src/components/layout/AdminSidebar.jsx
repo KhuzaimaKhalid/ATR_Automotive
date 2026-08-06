@@ -67,7 +67,7 @@ const AdminSidebar = () => {
   };
 
   return (
-    <aside className="w-64 shrink-0 bg-[#151B26] flex flex-col justify-between py-6 h-full min-h-screen overflow-y-auto">
+    <aside className="w-64 shrink-0 bg-[#151B26] flex flex-col justify-between py-6">
       <nav className="px-4 flex flex-col gap-2">
         {navItems.map(({ label, icon: Icon, path, children }) => {
           const isParentActive = location.pathname.startsWith(path);
@@ -135,12 +135,11 @@ const AdminSidebar = () => {
         })}
       </nav>
 
-      {/* Bottom Footer Section */}
-      <div className="px-4 mt-auto pt-6 flex flex-col gap-4 items-center">
+      <div className="px-4 mt-auto pt-6 flex flex-col gap-4 items-center shrink-0">
         <img
           src={carImg}
           alt="ATR Asset"
-          className="w-full max-w-[180px] max-h-24 object-contain drop-shadow-xl pointer-events-none select-none"
+          className="w-full max-w-[180px] max-h-36 object-contain drop-shadow-xl pointer-events-none select-none"
         />
         <button
           onClick={() => navigate("/")}
