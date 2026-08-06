@@ -12,10 +12,18 @@ function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1280,
     height: 800,
+    show: false, 
+    resizable: true,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
     },
+  });
+
+  mainWindow.maximize();
+
+  mainWindow.once("ready-to-show", () => {
+    mainWindow.show();
   });
 
   const isDev = process.env.ELECTRON_START_URL ? true : false;
