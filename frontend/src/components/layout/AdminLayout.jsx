@@ -5,7 +5,7 @@ const AdminLayout = ({ children }) => {
   return (
     <div className="min-h-screen w-full bg-[#F8F9FA] flex flex-col">
       <AdminHeader />
-      <div className="flex flex-1">
+      <div className="flex flex-1 items-stretch">
         <AdminSidebar />
         <main className="flex-1 p-8 overflow-x-hidden">{children}</main>
       </div>
