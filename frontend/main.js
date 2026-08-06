@@ -12,8 +12,9 @@ function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1280,
     height: 800,
-    show: false, 
+    show: false,
     resizable: true,
+    icon: path.join(__dirname, "src/assets/logo.png"),
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
