@@ -41,8 +41,7 @@ const navItems = [
       { label: "Stock Report", path: "/admin/reports/stock" },
     ],
   },
-  // In AdminSidebar.jsx
-{ label: "User", icon: User, path: "/admin/user" },
+  { label: "User", icon: User, path: "/admin/user" },
 ];
 
 const AdminSidebar = () => {
@@ -68,7 +67,7 @@ const AdminSidebar = () => {
   };
 
   return (
-    <aside className="w-[260px] shrink-0 bg-[#151B26] flex flex-col justify-between py-6 min-h-[calc(100vh-90px)]">
+    <aside className="w-64 shrink-0 bg-[#151B26] flex flex-col justify-between py-6 h-full min-h-screen overflow-y-auto">
       <nav className="px-4 flex flex-col gap-2">
         {navItems.map(({ label, icon: Icon, path, children }) => {
           const isParentActive = location.pathname.startsWith(path);
@@ -96,7 +95,7 @@ const AdminSidebar = () => {
               <button
                 onClick={() => {
                   toggleExpand(label);
-                  navigate(path)
+                  navigate(path);
                 }}
                 className={`flex items-center gap-3.5 px-4 py-3 rounded-lg text-sm font-semibold transition w-full text-left ${
                   isParentActive
@@ -136,11 +135,12 @@ const AdminSidebar = () => {
         })}
       </nav>
 
-      <div className="px-4 flex flex-col gap-6 items-center">
+      {/* Bottom Footer Section */}
+      <div className="px-4 mt-auto pt-6 flex flex-col gap-4 items-center">
         <img
           src={carImg}
           alt="ATR Asset"
-          className="w-full max-w-[210px] object-contain drop-shadow-xl pointer-events-none select-none"
+          className="w-full max-w-[180px] max-h-24 object-contain drop-shadow-xl pointer-events-none select-none"
         />
         <button
           onClick={() => navigate("/")}
