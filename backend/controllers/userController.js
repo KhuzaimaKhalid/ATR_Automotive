@@ -16,6 +16,13 @@ const login = async (req, res) => {
             return res.status(404).json({ status: "failed", message: "User not found" });
         }
 
+        if (user.role !== 'admin' && !user.is_verified) {
+            return res.status(403).json({ 
+                status: "failed", 
+                message: "Your email address has not been verified yet. Please check your inbox for the verification code." 
+            });
+        }
+
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
             return res.status(400).json({ status: "failed", message: "Email or Password is not valid" });
