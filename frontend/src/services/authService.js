@@ -15,6 +15,12 @@ const register = async (full_name, email, password) => {
   return response.data;
 };
 
+const verifyEmail = async (email, otp) => {
+  const response = await api.post("/user/verify-email", { email, otp });
+  return response.data;
+};
+
+
 const forgotPassword = async (email) => {
   const response = await api.post("/user/forgot-password", { email });
   return response.data;
@@ -37,6 +43,6 @@ const logout = async () => {
   }
 };
 
-const authService = { login, register, forgotPassword, resetPassword, logout };
+const authService = { login, register, forgotPassword, resetPassword, logout, verifyEmail };
 
 export default authService;
