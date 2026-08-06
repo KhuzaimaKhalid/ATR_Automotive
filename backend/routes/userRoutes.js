@@ -14,7 +14,8 @@ const {
   logout, 
   forgotPassword, 
   resetPassword, 
-  getChangeHistory 
+  getChangeHistory,
+  verifyEmail
 } = require('../controllers/userController');
 
 const authMiddleware = require('../middlewares/authMiddleware');
@@ -22,7 +23,8 @@ const adminMiddleware = require('../middlewares/adminMiddleware');
 
 // Public routes
 router.post('/login', login);
-router.post('/register', createUser); // <--- Add public signup endpoint
+router.post('/register', createUser); 
+router.post('/verify-email', verifyEmail);
 router.post('/forgot-password', forgotPassword);
 router.put('/reset-password/:id/:token', resetPassword);
 

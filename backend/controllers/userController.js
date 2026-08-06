@@ -3,6 +3,8 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const transporter = require('../config/emailConfig');
 
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 const login = async (req, res) => {
     try {
         const { email, password } = req.body;
@@ -13,6 +15,14 @@ const login = async (req, res) => {
         if (!user) {
             return res.status(404).json({ status: "failed", message: "User not found" });
         }
+
+        if (!user.is_verified) {
+            return res.status(403).json({ 
+                status: "failed", 
+                message: "Your email address has not been verified yet. Please check your inbox for the verification code." 
+            });
+        }
+
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
             return res.status(400).json({ status: "failed", message: "Email or Password is not valid" });
@@ -41,20 +51,92 @@ const createUser = async (req, res) => {
         if (!full_name || !email || !password) {
             return res.status(400).json({ status: "failed", message: "All fields are required" });
         }
-        const existing = await db.prepare('SELECT id FROM users WHERE email = ?').get(email);
-        if (existing) {
-            return res.status(400).json({ status: "failed", message: "User already exists" });
+
+        if (!EMAIL_REGEX.test(email)) {
+            return res.status(400).json({ status: "failed", message: "Invalid email format" });
         }
+
+        const existing = await db.prepare('SELECT id, is_verified FROM users WHERE email = ?').get(email);
+        if (existing) {
+            if (existing.is_verified) {
+                return res.status(400).json({ status: "failed", message: "User with this email already exists" });
+            }
+            await db.prepare('DELETE FROM users WHERE id = ?').run(existing.id);
+        }
+
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        const otpExpiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
+
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
-        const result = await db.prepare(
-            'INSERT INTO users (full_name, email, password, role) VALUES (?, ?, ?, ?)'
-        ).run(full_name, email, hashedPassword, role || 'user');
-        const newUser = await db.prepare('SELECT id, full_name, email, role, is_active, created_at FROM users WHERE id = ?').get(result.lastInsertRowid);
-        res.status(201).json({ status: "success", message: "User created successfully", user: newUser });
+
+        try {
+            await transporter.sendMail({
+                from: process.env.EMAIL_FROM,
+                to: email,
+                subject: "ATR Automotive - Verify Your Email Address",
+                html: `
+                  <div style="font-family: Arial, sans-serif; padding: 20px;">
+                    <h2>Welcome to ATR Automotive!</h2>
+                    <p>Your verification code is: <b style="font-size: 24px; color: #CD051F;">${otp}</b></p>
+                    <p>This code will expire in 15 minutes.</p>
+                  </div>
+                `
+            });
+        } catch (emailErr) {
+            console.error("Email Delivery Failed:", emailErr);
+            return res.status(400).json({ 
+                status: "failed", 
+                message: "Unable to send verification email. Please make sure you entered a valid, existing email address." 
+            });
+        }
+
+        await db.prepare(
+            'INSERT INTO users (full_name, email, password, role, is_verified, verification_otp, otp_expires_at) VALUES (?, ?, ?, ?, 0, ?, ?)'
+        ).run(full_name, email, hashedPassword, role || 'user', otp, otpExpiresAt);
+
+        res.status(201).json({ 
+            status: "success", 
+            message: "Verification code sent to your email. Please check your inbox." 
+        });
     } catch (error) {
         console.log(error);
         res.status(500).json({ status: "failed", message: "User creation failed" });
+    }
+};
+
+const verifyEmail = async (req, res) => {
+    try {
+        const { email, otp } = req.body;
+        if (!email || !otp) {
+            return res.status(400).json({ status: "failed", message: "Email and OTP are required" });
+        }
+
+        const user = await db.prepare('SELECT * FROM users WHERE email = ?').get(email);
+        if (!user) {
+            return res.status(404).json({ status: "failed", message: "User not found" });
+        }
+
+        if (user.is_verified) {
+            return res.status(400).json({ status: "failed", message: "Account already verified" });
+        }
+
+        if (user.verification_otp !== otp) {
+            return res.status(400).json({ status: "failed", message: "Invalid verification code" });
+        }
+
+        if (new Date() > new Date(user.otp_expires_at)) {
+            return res.status(400).json({ status: "failed", message: "Verification code expired. Please sign up again." });
+        }
+
+        await db.prepare(
+            'UPDATE users SET is_verified = 1, verification_otp = NULL, otp_expires_at = NULL WHERE id = ?'
+        ).run(user.id);
+
+        res.status(200).json({ status: "success", message: "Email verified successfully. You can now login." });
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({ status: "failed", message: "Verification failed" });
     }
 };
 
@@ -240,7 +322,11 @@ const forgotPassword = async (req, res) => {
         }
         const secret = user.id + process.env.JWT_SECRET;
         const token = jwt.sign({ id: user.id }, secret, { expiresIn: '15m' });
-        const link = `http://localhost:5173/reset-password/${user.id}/${token}`;
+        
+        // Use CLIENT_URL environment variable or request headers origin instead of hardcoded localhost
+        const clientUrl = process.env.CLIENT_URL || `${req.protocol}://${req.get('host')}`;
+        const link = `${clientUrl}/reset-password/${user.id}/${token}`;
+
         await transporter.sendMail({
             from: process.env.EMAIL_FROM,
             to: user.email,
@@ -307,5 +393,6 @@ module.exports = {
     logout,
     forgotPassword,
     resetPassword,
-    getChangeHistory
+    getChangeHistory,
+    verifyEmail
 };
