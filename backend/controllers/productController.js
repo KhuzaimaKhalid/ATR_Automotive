@@ -79,24 +79,37 @@ const updateProduct = async (req, res) => {
 
 const deleteProduct = async (req, res) => {
     try {
-      const { id } = req.params;
-  
-      const product = await db.prepare('SELECT image FROM products WHERE id = ?').get(id);
-  
-      if (!product) {
-        return res.status(404).json({ message: "Product not found" });
-      }
-  
-      if (product.image && product.image.includes('public.blob.vercel-storage.com')) {
-        await del(product.image);
-      }
-  
-      await db.prepare('DELETE FROM products WHERE id = ?').run(id);
-  
-      return res.status(200).json({ message: "Product deleted successfully" });
+        const { id } = req.params;
+
+        const product = await db.prepare('SELECT image FROM products WHERE id = ?').get(id);
+
+        if (!product) {
+            return res.status(404).json({ message: "Product not found" });
+        }
+
+        // Delete image from Vercel Blob safely
+        if (product.image && product.image.includes('blob.vercel-storage.com')) {
+            try {
+                await del(product.image, { token: process.env.BLOB_READ_WRITE_TOKEN });
+            } catch (blobErr) {
+                console.error("Failed to delete blob image:", blobErr);
+            }
+        }
+
+        await db.prepare('DELETE FROM products WHERE id = ?').run(id);
+
+        return res.status(200).json({ message: "Product deleted successfully" });
     } catch (error) {
-      console.error(error);
-      return res.status(500).json({ message: "Server error" });
+        console.error("Error deleting product:", error);
+        
+        // Return clear error if foreign key constraints fail (sales exist for product)
+        if (error.code === 'SQLITE_CONSTRAINT' || error?.cause?.code === 'SQLITE_CONSTRAINT') {
+            return res.status(400).json({ 
+                message: "Cannot delete this product because it has associated sales history." 
+            });
+        }
+        
+        return res.status(500).json({ message: error.message || "Server error" });
     }
 };
 
