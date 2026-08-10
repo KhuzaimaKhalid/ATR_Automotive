@@ -1,12 +1,18 @@
 import { useState } from "react";
+import { ChevronDown } from "lucide-react";
 import api from "../../services/api";
 
-const AddCategoryModal = ({ onClose, onAdded }) => {
+const AddCategoryModal = ({ pages = [], defaultPageId, onClose, onAdded }) => {
   const [name, setName] = useState("");
+  const [pageId, setPageId] = useState(defaultPageId || "");
+  const [pageDropdownOpen, setPageDropdownOpen] = useState(false);
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+
+  const selectedPageName =
+    pages.find((p) => String(p.id) === String(pageId))?.name || "Select Page";
 
   const handleImageChange = (e) => {
     const file = e.target.files?.[0];
@@ -31,6 +37,10 @@ const AddCategoryModal = ({ onClose, onAdded }) => {
       setError("Category name is required.");
       return;
     }
+    if (!pageId) {
+      setError("Please select a page.");
+      return;
+    }
 
     setSubmitting(true);
     setError("");
@@ -38,6 +48,7 @@ const AddCategoryModal = ({ onClose, onAdded }) => {
     try {
       const formData = new FormData();
       formData.append("name", name.trim());
+      formData.append("page_id", pageId);
       if (imageFile) {
         formData.append("image", imageFile);
       }
@@ -68,6 +79,45 @@ const AddCategoryModal = ({ onClose, onAdded }) => {
         )}
 
         <form onSubmit={handleSubmit} className="w-full flex flex-col items-center">
+          {/* Page Selector */}
+          <div className="w-full mb-5 text-center">
+            <label className="block font-extrabold text-gray-900 text-sm mb-2.5">
+              Page<span className="text-[#CD051F]">*</span>
+            </label>
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setPageDropdownOpen((p) => !p)}
+                className="w-full flex items-center justify-between border border-gray-300 rounded-lg px-4 py-2.5 text-xs text-left text-gray-800 hover:border-gray-500 transition"
+              >
+                <span className={pageId ? "text-gray-800" : "text-gray-400"}>
+                  {selectedPageName}
+                </span>
+                <ChevronDown
+                  size={14}
+                  className={pageDropdownOpen ? "rotate-180 transition text-gray-400" : "transition text-gray-400"}
+                />
+              </button>
+              {pageDropdownOpen && (
+                <div className="absolute left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-20 py-1 max-h-44 overflow-y-auto">
+                  {pages.map((p) => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => {
+                        setPageId(p.id);
+                        setPageDropdownOpen(false);
+                      }}
+                      className="w-full text-left px-4 py-2 text-xs text-gray-700 hover:bg-gray-50"
+                    >
+                      {p.name}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
           {/* Category Name Input */}
           <div className="w-full mb-6 text-center">
             <label className="block font-extrabold text-gray-900 text-sm mb-2.5">
@@ -88,9 +138,7 @@ const AddCategoryModal = ({ onClose, onAdded }) => {
               Category Image<span className="text-[#CD051F]">*</span>
             </label>
 
-            {/* Outer Bordered Wrapper Card */}
             <label className="w-full max-w-[280px] border-2 border-black rounded-xl p-3 flex flex-col items-center cursor-pointer hover:bg-gray-50 transition-colors">
-              {/* Inner Dark Image Preview Box */}
               <div className="w-full h-40 bg-[#181d24] rounded-lg flex items-center justify-center overflow-hidden mb-3">
                 {imagePreview ? (
                   <img
@@ -99,7 +147,6 @@ const AddCategoryModal = ({ onClose, onAdded }) => {
                     className="max-h-full max-w-full object-contain p-2"
                   />
                 ) : (
-                  /* Upload File Icon matching design */
                   <div className="w-12 h-14 bg-white rounded-lg flex flex-col items-center justify-center">
                     <svg
                       className="w-7 h-7 text-[#181d24]"
@@ -123,7 +170,6 @@ const AddCategoryModal = ({ onClose, onAdded }) => {
                 )}
               </div>
 
-              {/* Text Labels inside container */}
               <span className="text-black font-bold text-sm tracking-tight">
                 Click to upload image
               </span>

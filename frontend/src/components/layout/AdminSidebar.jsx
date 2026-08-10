@@ -12,15 +12,7 @@ import carImg from "../../assets/car.png";
 
 const navItems = [
   { label: "Dashboard", icon: LayoutGrid, path: "/admin/dashboard" },
-  {
-    label: "Manage Product",
-    icon: Package,
-    path: "/admin/products",
-    children: [
-      { label: "Product", path: "/admin/products" },
-      { label: "Categories", path: "/admin/products/categories" },
-    ],
-  },
+  { label: "Manage Inventory", icon: Package, path: "/admin/products" },
   {
     label: "Sales",
     icon: ShoppingCart,

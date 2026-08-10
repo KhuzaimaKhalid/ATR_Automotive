@@ -1,8 +1,11 @@
 import { useState, useEffect } from "react";
+import { ChevronDown } from "lucide-react";
 import api from "../../services/api";
 
-const EditCategoryModal = ({ category, onClose, onUpdated }) => {
+const EditCategoryModal = ({ category, pages = [], onClose, onUpdated }) => {
   const [name, setName] = useState(category?.name || "");
+  const [pageId, setPageId] = useState(category?.page_id || "");
+  const [pageDropdownOpen, setPageDropdownOpen] = useState(false);
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(category?.image || null);
   const [submitting, setSubmitting] = useState(false);
@@ -11,10 +14,14 @@ const EditCategoryModal = ({ category, onClose, onUpdated }) => {
   useEffect(() => {
     if (category) {
       setName(category.name || "");
+      setPageId(category.page_id || "");
       setImagePreview(category.image || null);
       setImageFile(null);
     }
   }, [category]);
+
+  const selectedPageName =
+    pages.find((p) => String(p.id) === String(pageId))?.name || "Select Page";
 
   const handleImageChange = (e) => {
     const file = e.target.files?.[0];
@@ -27,12 +34,9 @@ const EditCategoryModal = ({ category, onClose, onUpdated }) => {
         setError("Image size must be under 2MB.");
         return;
       }
-      
-      // Clean up previous blob URL if exists to avoid memory leaks
       if (imagePreview && imagePreview.startsWith("blob:")) {
         URL.revokeObjectURL(imagePreview);
       }
-
       setImageFile(file);
       setImagePreview(URL.createObjectURL(file));
       setError("");
@@ -45,6 +49,10 @@ const EditCategoryModal = ({ category, onClose, onUpdated }) => {
       setError("Category name is required.");
       return;
     }
+    if (!pageId) {
+      setError("Please select a page.");
+      return;
+    }
 
     setSubmitting(true);
     setError("");
@@ -52,6 +60,7 @@ const EditCategoryModal = ({ category, onClose, onUpdated }) => {
     try {
       const formData = new FormData();
       formData.append("name", name.trim());
+      formData.append("page_id", pageId);
       if (imageFile) {
         formData.append("image", imageFile);
       }
@@ -62,9 +71,9 @@ const EditCategoryModal = ({ category, onClose, onUpdated }) => {
 
       if (onUpdated) {
         onUpdated(
-          response.data?.category || 
-          response.data || 
-          { ...category, name: name.trim(), image: imagePreview }
+          response.data?.category ||
+          response.data ||
+          { ...category, name: name.trim(), image: imagePreview, page_id: pageId }
         );
       }
       onClose();
@@ -86,6 +95,45 @@ const EditCategoryModal = ({ category, onClose, onUpdated }) => {
         )}
 
         <form onSubmit={handleSubmit} className="w-full flex flex-col items-center">
+          {/* Page Selector */}
+          <div className="w-full mb-5 text-center">
+            <label className="block font-extrabold text-gray-900 text-sm mb-2.5">
+              Page<span className="text-[#D30027]">*</span>
+            </label>
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setPageDropdownOpen((p) => !p)}
+                className="w-full flex items-center justify-between border border-gray-300 rounded-lg px-4 py-2.5 text-xs text-left text-gray-800 hover:border-gray-500 transition"
+              >
+                <span className={pageId ? "text-gray-800" : "text-gray-400"}>
+                  {selectedPageName}
+                </span>
+                <ChevronDown
+                  size={14}
+                  className={pageDropdownOpen ? "rotate-180 transition text-gray-400" : "transition text-gray-400"}
+                />
+              </button>
+              {pageDropdownOpen && (
+                <div className="absolute left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-20 py-1 max-h-44 overflow-y-auto">
+                  {pages.map((p) => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => {
+                        setPageId(p.id);
+                        setPageDropdownOpen(false);
+                      }}
+                      className="w-full text-left px-4 py-2 text-xs text-gray-700 hover:bg-gray-50"
+                    >
+                      {p.name}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
           {/* Category Name Input */}
           <div className="w-full mb-6 text-center">
             <label className="block font-extrabold text-gray-900 text-sm mb-2.5">
@@ -106,9 +154,7 @@ const EditCategoryModal = ({ category, onClose, onUpdated }) => {
               Category Image
             </label>
 
-            {/* Outer Bordered Wrapper Card */}
             <label className="w-full max-w-[280px] border-2 border-black rounded-xl p-3 flex flex-col items-center cursor-pointer hover:bg-gray-50 transition-colors">
-              {/* Inner Dark Image Preview Box */}
               <div className="w-full h-40 bg-[#181d24] rounded-lg flex items-center justify-center overflow-hidden mb-3">
                 {imagePreview ? (
                   <img
