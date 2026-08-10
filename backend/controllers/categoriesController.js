@@ -24,11 +24,13 @@ const createCategories = async (req, res) => {
             image: blob.url 
         });
     } catch (error) {
+        if (error.code === 'SQLITE_CONSTRAINT' || error?.cause?.code === 'SQLITE_CONSTRAINT') {
+            return res.status(409).json({ message: "A category with this name already exists under this page." });
+        }
         console.error(error);
         return res.status(500).json({ message: "Server error", error: error.message });
     }
 };
-
 
 const updateCategory = async (req, res) => {
     try {
