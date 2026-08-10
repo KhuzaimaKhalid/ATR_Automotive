@@ -20,10 +20,12 @@ const createEmptyCustomer = (name) => ({
 const POSPage = () => {
   const navigate = useNavigate();
 
+  const [pages, setPages] = useState([]);
   const [categories, setCategories] = useState([]);
   const [products, setProducts] = useState([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
 
+  const [selectedPageId, setSelectedPageId] = useState(null);
   const [selectedCategoryId, setSelectedCategoryId] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -34,17 +36,39 @@ const POSPage = () => {
 
   const activeCart = customers[activeIndex];
 
+  // 1. Fetch Pages, Categories, and Products on Mount
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
-        const [categoriesRes, productsRes] = await Promise.all([
-          api.get("/categories"),
-          api.get("/product"),
+        const [pagesRes, categoriesRes, productsRes] = await Promise.all([
+          api.get("/pages").catch(() => ({ data: { pages: [] } })),
+          api.get("/categories").catch(() => ({ data: { categories: [] } })),
+          api.get("/product").catch(() => api.get("/products")).catch(() => ({ data: [] })),
         ]);
-        setCategories(
-          Array.isArray(categoriesRes.data?.categories) ? categoriesRes.data.categories : []
-        );
-        setProducts(Array.isArray(productsRes.data) ? productsRes.data : []);
+
+        const fetchedPages = Array.isArray(pagesRes.data?.pages)
+          ? pagesRes.data.pages
+          : Array.isArray(pagesRes.data)
+          ? pagesRes.data
+          : [];
+        setPages(fetchedPages);
+        if (fetchedPages.length > 0) {
+          setSelectedPageId(fetchedPages[0].id);
+        }
+
+        const fetchedCategories = Array.isArray(categoriesRes.data?.categories)
+          ? categoriesRes.data.categories
+          : Array.isArray(categoriesRes.data)
+          ? categoriesRes.data
+          : [];
+        setCategories(fetchedCategories);
+
+        const rawProducts = Array.isArray(productsRes.data?.products)
+          ? productsRes.data.products
+          : Array.isArray(productsRes.data)
+          ? productsRes.data
+          : [];
+        setProducts(rawProducts);
       } catch (error) {
         console.error("Error fetching POS data:", error);
       } finally {
@@ -58,19 +82,44 @@ const POSPage = () => {
   const refreshProducts = async () => {
     try {
       const res = await api.get("/product");
-      setProducts(Array.isArray(res.data) ? res.data : []);
+      const rawProducts = Array.isArray(res.data?.products)
+        ? res.data.products
+        : Array.isArray(res.data)
+        ? res.data
+        : [];
+      setProducts(rawProducts);
     } catch (error) {
       console.error("Error refreshing products:", error);
     }
   };
 
+  // 2. Filter Categories for Active Page
+  const categoriesForSelectedPage = useMemo(() => {
+    if (!selectedPageId) return categories;
+    return categories.filter((c) => String(c.page_id) === String(selectedPageId));
+  }, [categories, selectedPageId]);
+
+  // 3. Filter Products by Status, Search, and Category/Page
   const filteredProducts = useMemo(() => {
     return products.filter((p) => {
-      const matchesCategory = !selectedCategoryId || p.category_id === selectedCategoryId;
-      const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase());
-      return matchesCategory && matchesSearch;
+      const isActive = p.status ? p.status.toLowerCase() !== "inactive" : true;
+
+      let matchesCategory = false;
+      if (selectedCategoryId) {
+        matchesCategory = String(p.category_id) === String(selectedCategoryId);
+      } else if (categoriesForSelectedPage.length > 0) {
+        matchesCategory = categoriesForSelectedPage.some(
+          (c) => String(c.id) === String(p.category_id)
+        );
+      } else {
+        matchesCategory = true;
+      }
+
+      const matchesSearch = p.name ? p.name.toLowerCase().includes(searchTerm.toLowerCase()) : true;
+
+      return isActive && matchesCategory && matchesSearch;
     });
-  }, [products, selectedCategoryId, searchTerm]);
+  }, [products, selectedCategoryId, categoriesForSelectedPage, searchTerm]);
 
   const updateActiveCart = (updater) => {
     setCustomers((prev) =>
@@ -158,7 +207,6 @@ const POSPage = () => {
   const handleSaveBill = async () => {
     if (activeCart.items.length === 0) return;
 
-    // Optional frontend check prior to sending request:
     const subtotal = activeCart.items.reduce((sum, i) => sum + i.qty * i.price, 0);
     const labor = Number(activeCart.laborCharges) || 0;
     const paid = Number(activeCart.paidAmount) || 0;
@@ -170,12 +218,10 @@ const POSPage = () => {
 
     setSaving(true);
     try {
-      // Send ONLY raw inputs: items (IDs + qtys), labor, and paid amount
       const res = await api.post("/sales", {
         items: activeCart.items.map((i) => ({
           product_id: i.product_id,
           qty: i.qty,
-          // Sending price is optional if backend fetches product prices from DB!
           price: i.price, 
         })),
         labor_charges: labor,
@@ -197,6 +243,7 @@ const POSPage = () => {
       setSaving(false);
     }
   };
+
   const handlePrint = async () => {
     if (!activeCart.invoiceNo) {
       const result = await handleSaveBill();
@@ -211,11 +258,20 @@ const POSPage = () => {
 
   return (
     <div className="min-h-screen w-full bg-[#F8F9FA] flex flex-col">
-      <POSHeader searchTerm={searchTerm} onSearchChange={setSearchTerm} />
+      <POSHeader
+        pages={pages}
+        selectedPageId={selectedPageId}
+        onSelectPage={(pageId) => {
+          setSelectedPageId(pageId);
+          setSelectedCategoryId(null);
+        }}
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+      />
 
       <div className="flex flex-1">
         <CategorySidebar
-          categories={categories}
+          categories={categoriesForSelectedPage}
           selectedCategoryId={selectedCategoryId}
           onSelectCategory={setSelectedCategoryId}
         />
