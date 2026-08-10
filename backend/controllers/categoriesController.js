@@ -85,12 +85,18 @@ const updateCategory = async (req, res) => {
 
 const getAllCategories = async (req, res) => {
     try {
-        const sql = 'SELECT * FROM categories';
-        const categories = await db.prepare(sql).all();
-        if (categories.length === 0) {
-            return res.status(404).json({ message: "No categories found" });
+        const { page_id } = req.query;
+        let categories;
+
+        if (page_id) {
+            const sql = 'SELECT * FROM categories WHERE page_id = ?';
+            categories = await db.prepare(sql).all(page_id);
+        } else {
+            const sql = 'SELECT * FROM categories';
+            categories = await db.prepare(sql).all();
         }
-        return res.status(200).json({ categories });
+        
+        return res.status(200).json({ categories: categories || [] });
     } catch (error) {
         console.error(error);
         return res.status(500).json({ message: "Server error", error: error.message });
