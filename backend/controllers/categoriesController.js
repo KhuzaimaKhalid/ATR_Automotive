@@ -20,8 +20,12 @@ const createCategories = async (req, res) => {
 
         return res.status(201).json({ 
             message: "Category created successfully", 
-            categoryId: Number(result.lastInsertRowid), 
-            image: blob.url 
+            category: {
+                id: Number(result.lastInsertRowid),
+                name,
+                image: blob.url,
+                page_id: page_id ? Number(page_id) : null
+            }
         });
     } catch (error) {
         if (error.code === 'SQLITE_CONSTRAINT' || error?.cause?.code === 'SQLITE_CONSTRAINT') {
@@ -55,14 +59,25 @@ const updateCategory = async (req, res) => {
             });
             imageUrl = blob.url;
         }
-        const newPageId = page_id !== undefined && page_id !== "" ? page_id : existing.page_id;
+        const newPageId = page_id !== undefined && page_id !== "" ? Number(page_id) : existing.page_id;
         const sql = 'UPDATE categories SET name = ?, image = ?, page_id = ? WHERE id = ?';
         const result = await db.prepare(sql).run(name, imageUrl, newPageId, id);
         if (result.changes === 0) {
             return res.status(404).json({ message: "Category not found" });
         }
-        return res.status(200).json({ message: "Category updated successfully", image: imageUrl });
+        return res.status(200).json({
+            message: "Category updated successfully",
+            category: {
+                id: Number(id),
+                name,
+                image: imageUrl,
+                page_id: newPageId
+            }
+        });
     } catch (error) {
+        if (error.code === 'SQLITE_CONSTRAINT' || error?.cause?.code === 'SQLITE_CONSTRAINT') {
+            return res.status(409).json({ message: "A category with this name already exists under this page." });
+        }
         console.error(error);
         return res.status(500).json({ message: "Server error", error: error.message });
     }
