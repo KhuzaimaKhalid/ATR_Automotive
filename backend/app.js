@@ -10,6 +10,7 @@ const productRoutes = require("./routes/productRoutes");
 const salesRoutes = require("./routes/saleRoutes");
 const reportRoutes = require("./routes/reportRoutes");
 const returnRoutes = require("./routes/returnRoutes");
+const pagesRoutes = require("./routes/pagesRoutes");
 
 const app = express();
 
@@ -57,6 +58,9 @@ app.use("/report", reportRoutes);
 
 app.use("/api/return", returnRoutes);
 app.use("/return", returnRoutes);
+
+app.use("/api/pages", pagesRoutes);
+app.use("/pages", pagesRoutes);
 
 if (process.env.NODE_ENV !== 'production') {
     app.listen(PORT || 5000, () => {

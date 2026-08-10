@@ -3,7 +3,7 @@ const { put, del } = require('@vercel/blob');
 
 const createCategories = async (req, res) => {
     try {
-        const { name } = req.body;
+        const { name, page_id } = req.body;
 
         if (!name || !req.file) {
             return res.status(400).json({ message: "Please provide all required fields" });
@@ -15,8 +15,8 @@ const createCategories = async (req, res) => {
             token: process.env.BLOB_READ_WRITE_TOKEN
         });
 
-        const sql = 'INSERT INTO categories (name, image) VALUES (?, ?)';
-        const result = await db.prepare(sql).run(name, blob.url);
+        const sql = 'INSERT INTO categories (name, image, page_id) VALUES (?, ?, ?)';
+        const result = await db.prepare(sql).run(name, blob.url, page_id || null);
 
         return res.status(201).json({ 
             message: "Category created successfully", 
@@ -29,15 +29,16 @@ const createCategories = async (req, res) => {
     }
 };
 
+
 const updateCategory = async (req, res) => {
     try {
         const { id } = req.params;
-        const { name } = req.body;
+        const { name, page_id } = req.body;
         
         if (!name) {
             return res.status(400).json({ message: "Please provide all required fields" });
         }
-        const existing = await db.prepare('SELECT image FROM categories WHERE id = ?').get(id);
+        const existing = await db.prepare('SELECT image, page_id FROM categories WHERE id = ?').get(id);
         if (!existing) {
             return res.status(404).json({ message: "Category not found" });
         }
@@ -52,8 +53,9 @@ const updateCategory = async (req, res) => {
             });
             imageUrl = blob.url;
         }
-        const sql = 'UPDATE categories SET name = ?, image = ? WHERE id = ?';
-        const result = await db.prepare(sql).run(name, imageUrl, id);
+        const newPageId = page_id !== undefined && page_id !== "" ? page_id : existing.page_id;
+        const sql = 'UPDATE categories SET name = ?, image = ?, page_id = ? WHERE id = ?';
+        const result = await db.prepare(sql).run(name, imageUrl, newPageId, id);
         if (result.changes === 0) {
             return res.status(404).json({ message: "Category not found" });
         }
