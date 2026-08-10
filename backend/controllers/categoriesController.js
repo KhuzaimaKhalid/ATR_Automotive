@@ -110,21 +110,37 @@ const getCategoriesById = async (req, res) => {
     }
 };
 
-const deleteCategory = async (req, res) => {
+const deleteProduct = async (req, res) => {
     try {
         const { id } = req.params;
-        const category = await db.prepare('SELECT image FROM categories WHERE id = ?').get(id);
-        if (!category) {
-            return res.status(404).json({ message: "Category not found" });
+
+        const product = await db.prepare('SELECT image FROM products WHERE id = ?').get(id);
+
+        if (!product) {
+            return res.status(404).json({ message: "Product not found" });
         }
-        if (category.image && category.image.includes('blob.vercel-storage.com')) {
-            await del(category.image, { token: process.env.BLOB_READ_WRITE_TOKEN });
+
+        if (product.image && product.image.includes('blob.vercel-storage.com')) {
+            try {
+                await del(product.image, { token: process.env.BLOB_READ_WRITE_TOKEN });
+            } catch (blobErr) {
+                console.error("Failed to delete blob image:", blobErr);
+            }
         }
-        await db.prepare('DELETE FROM categories WHERE id = ?').run(id);
-        return res.status(200).json({ message: "Category deleted successfully" });
+
+        await db.prepare('DELETE FROM products WHERE id = ?').run(id);
+
+        return res.status(200).json({ message: "Product deleted successfully" });
     } catch (error) {
-        console.error(error);
-        return res.status(500).json({ message: "Server error", error: error.message });
+        console.error("Error deleting product:", error);
+
+        if (error.code === 'SQLITE_CONSTRAINT' || error?.cause?.code === 'SQLITE_CONSTRAINT') {
+            return res.status(400).json({ 
+                message: "Cannot delete this product because it has associated sales history." 
+            });
+        }
+        
+        return res.status(500).json({ message: error.message || "Server error" });
     }
 };
 
