@@ -28,6 +28,7 @@ const POSPage = () => {
   const [selectedPageId, setSelectedPageId] = useState(null);
   const [selectedCategoryId, setSelectedCategoryId] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [mobileCategoryOpen, setMobileCategoryOpen] = useState(false);
 
   const [customers, setCustomers] = useState([createEmptyCustomer("Customer 1")]);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -36,7 +37,6 @@ const POSPage = () => {
 
   const activeCart = customers[activeIndex];
 
-  // 1. Fetch Pages, Categories, and Products on Mount
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
@@ -93,13 +93,11 @@ const POSPage = () => {
     }
   };
 
-  // 2. Filter Categories for Active Page
   const categoriesForSelectedPage = useMemo(() => {
     if (!selectedPageId) return categories;
     return categories.filter((c) => String(c.page_id) === String(selectedPageId));
   }, [categories, selectedPageId]);
 
-  // 3. Filter Products by Status, Search, and Category/Page
   const filteredProducts = useMemo(() => {
     return products.filter((p) => {
       const isActive = p.status ? p.status.toLowerCase() !== "inactive" : true;
@@ -257,7 +255,7 @@ const POSPage = () => {
   };
 
   return (
-    <div className="min-h-screen w-full bg-[#F8F9FA] flex flex-col">
+    <div className="h-screen w-full bg-[#F8F9FA] flex flex-col overflow-hidden">
       <POSHeader
         pages={pages}
         selectedPageId={selectedPageId}
@@ -267,16 +265,19 @@ const POSPage = () => {
         }}
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
+        onMenuClick={() => setMobileCategoryOpen(true)}
       />
 
-      <div className="flex flex-1">
+      <div className="flex flex-1 relative overflow-hidden">
         <CategorySidebar
           categories={categoriesForSelectedPage}
           selectedCategoryId={selectedCategoryId}
           onSelectCategory={setSelectedCategoryId}
+          mobileOpen={mobileCategoryOpen}
+          onClose={() => setMobileCategoryOpen(false)}
         />
 
-        <main className="flex-1 p-6 flex flex-col gap-5 overflow-x-hidden">
+        <main className="flex-1 p-3 sm:p-4 flex flex-col gap-3 overflow-hidden">
           <CustomerTabs
             customers={customers}
             activeIndex={activeIndex}
@@ -289,8 +290,9 @@ const POSPage = () => {
             }
           />
 
-          <div className="flex gap-6 flex-1 items-start">
-            <div className="flex-1 min-w-0">
+          <div className="flex flex-col xl:flex-row gap-4 flex-1 min-h-0 items-stretch overflow-hidden">
+            {/* Products Container: Scrollbar strictly beside Cart */}
+            <div className="flex-1 min-w-0 max-h-[calc(100vh-140px)] overflow-y-auto pr-2">
               <ProductGrid
                 products={filteredProducts}
                 loading={loadingProducts}
@@ -298,19 +300,22 @@ const POSPage = () => {
               />
             </div>
 
-            <CartPanel
-              cart={activeCart}
-              onIncrement={handleIncrement}
-              onDecrement={handleDecrement}
-              onRemoveItem={handleRemoveItem}
-              onLaborChange={handleLaborChange}
-              onPaidChange={handlePaidChange}
-              onSaveBill={handleSaveBill}
-              onPrint={handlePrint}
-              onClear={handleClear}
-              onReturn={handleReturn}
-              saving={saving}
-            />
+            {/* Cart Panel: Fixed vertical fit */}
+            <div className="w-full xl:w-[360px] shrink-0 max-h-[calc(100vh-140px)] flex flex-col">
+              <CartPanel
+                cart={activeCart}
+                onIncrement={handleIncrement}
+                onDecrement={handleDecrement}
+                onRemoveItem={handleRemoveItem}
+                onLaborChange={handleLaborChange}
+                onPaidChange={handlePaidChange}
+                onSaveBill={handleSaveBill}
+                onPrint={handlePrint}
+                onClear={handleClear}
+                onReturn={handleReturn}
+                saving={saving}
+              />
+            </div>
           </div>
         </main>
       </div>

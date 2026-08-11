@@ -113,216 +113,219 @@ const AddProductPage = () => {
 
   return (
     <AdminLayout>
-      <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">
-        Add New Products
-      </h1>
-      <p className="text-sm text-slate-500 mb-6">
-        Fill in the product details below
-      </p>
+      {/* Locked height container - No vertical scrollbar */}
+      <div className="flex flex-col h-full overflow-hidden">
+        <h1 className="text-xl font-extrabold text-slate-900 tracking-tight shrink-0">
+          Add New Products
+        </h1>
+        <p className="text-xs text-slate-500 mb-4 shrink-0">
+          Fill in the product details below
+        </p>
 
-      <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-8">
-        <div className="flex flex-wrap gap-10">
-          {/* Left: Image Upload */}
-          <div className="w-full max-w-[300px] shrink-0">
-            <h3 className="text-base font-bold text-slate-900 mb-3">
-              Product Image
-            </h3>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/png, image/jpeg"
-              onChange={handleImageChange}
-              className="hidden"
-            />
-            <button
-              type="button"
-              onClick={handleImageClick}
-              className="w-full aspect-square border border-slate-300 rounded-xl flex flex-col items-center justify-center gap-3 hover:border-[#CD051F] hover:bg-slate-50 transition overflow-hidden"
-            >
-              {imagePreview ? (
-                <img
-                  src={imagePreview}
-                  alt="Preview"
-                  className="w-full h-full object-cover"
+        <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-5 flex-1 min-h-0 overflow-hidden flex flex-col justify-center">
+          <div className="flex flex-col lg:flex-row gap-6 items-stretch h-full">
+            {/* Left: Image Upload */}
+            <div className="w-full lg:max-w-[220px] shrink-0 flex flex-col">
+              <h3 className="text-sm font-bold text-slate-900 mb-2">
+                Product Image
+              </h3>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/png, image/jpeg"
+                onChange={handleImageChange}
+                className="hidden"
+              />
+              <button
+                type="button"
+                onClick={handleImageClick}
+                className="w-full flex-1 max-h-[220px] lg:max-h-none border border-slate-300 rounded-xl flex flex-col items-center justify-center gap-2 hover:border-[#CD051F] hover:bg-slate-50 transition overflow-hidden p-4"
+              >
+                {imagePreview ? (
+                  <img
+                    src={imagePreview}
+                    alt="Preview"
+                    className="w-full h-full object-cover rounded-lg"
+                  />
+                ) : (
+                  <>
+                    <div className="w-10 h-10 rounded-lg bg-slate-200 flex items-center justify-center shrink-0">
+                      <FileUp size={20} className="text-slate-500" />
+                    </div>
+                    <div className="text-center">
+                      <p className="text-xs font-bold text-slate-800">
+                        Click to upload image
+                      </p>
+                      <p className="text-[10px] text-slate-400 mt-0.5">
+                        PNG, JPG upto 2MB
+                      </p>
+                    </div>
+                  </>
+                )}
+              </button>
+            </div>
+
+            {/* Right: Form Fields */}
+            <div className="flex-1 min-w-[280px] flex flex-col justify-between gap-3">
+              {/* Category */}
+              <div>
+                <label className="block text-xs font-bold text-slate-900 mb-1">
+                  Category
+                </label>
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setCategoryOpen((p) => !p)}
+                    className="w-full flex items-center justify-between border border-slate-300 rounded-lg px-3 py-2 text-xs text-left text-slate-700 hover:border-slate-400 transition"
+                  >
+                    <span className={form.category_id ? "text-slate-800 font-medium" : "text-slate-400"}>
+                      {selectedCategoryName}
+                    </span>
+                    <ChevronDown
+                      size={14}
+                      className={categoryOpen ? "rotate-180 transition text-slate-400" : "transition text-slate-400"}
+                    />
+                  </button>
+                  {categoryOpen && (
+                    <div className="absolute left-0 right-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-lg z-20 py-1 max-h-40 overflow-y-auto">
+                      {categories.map((c) => (
+                        <button
+                          key={c.id}
+                          type="button"
+                          onClick={() => {
+                            handleChange("category_id", c.id);
+                            setCategoryOpen(false);
+                          }}
+                          className="w-full text-left px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50"
+                        >
+                          {c.name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Product Name */}
+              <div>
+                <label className="block text-xs font-bold text-slate-900 mb-1">
+                  Product Name<span className="text-[#CD051F]">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={form.name}
+                  onChange={(e) => handleChange("name", e.target.value)}
+                  placeholder="Enter product name"
+                  className={`w-full border rounded-lg px-3 py-2 text-xs text-slate-800 placeholder-slate-400 focus:outline-none transition ${
+                    errors.name
+                      ? "border-red-400 focus:border-red-500"
+                      : "border-slate-300 focus:border-[#CD051F]"
+                  }`}
                 />
-              ) : (
-                <>
-                  <div className="w-14 h-14 rounded-lg bg-slate-200 flex items-center justify-center">
-                    <FileUp size={26} className="text-slate-500" />
-                  </div>
-                  <div className="text-center">
-                    <p className="text-sm font-bold text-slate-800">
-                      Click to upload image
-                    </p>
-                    <p className="text-xs text-slate-400 mt-1">
-                      PNG, JPG upto 2MB
-                    </p>
-                  </div>
-                </>
-              )}
-            </button>
-          </div>
+                {errors.name && (
+                  <p className="text-[10px] text-red-500 mt-0.5">{errors.name}</p>
+                )}
+              </div>
 
-          {/* Right: Form Fields */}
-          <div className="flex-1 min-w-[320px] flex flex-col gap-5">
-            {/* Category */}
-            <div>
-              <label className="block text-base font-bold text-slate-900 mb-2">
-                Category
-              </label>
-              <div className="relative">
+              {/* Purchase / Selling Price */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-900 mb-1">
+                    Purchase Price (PKR)
+                  </label>
+                  <input
+                    type="number"
+                    value={form.purchase_price}
+                    onChange={(e) => handleChange("purchase_price", e.target.value)}
+                    placeholder="Enter purchase price"
+                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#CD051F] transition"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-900 mb-1">
+                    Selling Price (PKR)<span className="text-[#CD051F]">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    value={form.selling_price}
+                    onChange={(e) => handleChange("selling_price", e.target.value)}
+                    placeholder="Enter selling price"
+                    className={`w-full border rounded-lg px-3 py-2 text-xs text-slate-800 placeholder-slate-400 focus:outline-none transition ${
+                      errors.selling_price
+                        ? "border-red-400 focus:border-red-500"
+                        : "border-slate-300 focus:border-[#CD051F]"
+                    }`}
+                  />
+                  {errors.selling_price && (
+                    <p className="text-[10px] text-red-500 mt-0.5">{errors.selling_price}</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Stock Quantity / Min Stock Level */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-900 mb-1">
+                    Stock Quantity<span className="text-[#CD051F]">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    value={form.stock_quantity}
+                    onChange={(e) => handleChange("stock_quantity", e.target.value)}
+                    placeholder="Enter stock quantity"
+                    className={`w-full border rounded-lg px-3 py-2 text-xs text-slate-800 placeholder-slate-400 focus:outline-none transition ${
+                      errors.stock_quantity
+                        ? "border-red-400 focus:border-red-500"
+                        : "border-slate-300 focus:border-[#CD051F]"
+                    }`}
+                  />
+                  {errors.stock_quantity && (
+                    <p className="text-[10px] text-red-500 mt-0.5">{errors.stock_quantity}</p>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-900 mb-1">
+                    Minimum Stock Level<span className="text-[#CD051F]">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    value={form.min_stock_level}
+                    onChange={(e) => handleChange("min_stock_level", e.target.value)}
+                    placeholder="Enter min stock level"
+                    className={`w-full border rounded-lg px-3 py-2 text-xs text-slate-800 placeholder-slate-400 focus:outline-none transition ${
+                      errors.min_stock_level
+                        ? "border-red-400 focus:border-red-500"
+                        : "border-slate-300 focus:border-[#CD051F]"
+                    }`}
+                  />
+                  {errors.min_stock_level && (
+                    <p className="text-[10px] text-red-500 mt-0.5">{errors.min_stock_level}</p>
+                  )}
+                </div>
+              </div>
+
+              {submitError && (
+                <p className="text-xs text-red-500 font-medium">{submitError}</p>
+              )}
+
+              {/* Action Buttons */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-1">
                 <button
                   type="button"
-                  onClick={() => setCategoryOpen((p) => !p)}
-                  className="w-full flex items-center justify-between border border-slate-300 rounded-lg px-4 py-3 text-sm text-left text-slate-700 hover:border-slate-400 transition"
+                  onClick={() => navigate("/admin/products")}
+                  className="w-full border border-slate-300 rounded-lg py-2 text-xs font-bold text-slate-800 hover:bg-slate-50 transition"
                 >
-                  <span className={form.category_id ? "text-slate-800" : "text-slate-400"}>
-                    {selectedCategoryName}
-                  </span>
-                  <ChevronDown
-                    size={16}
-                    className={categoryOpen ? "rotate-180 transition text-slate-400" : "transition text-slate-400"}
-                  />
+                  Cancel
                 </button>
-                {categoryOpen && (
-                  <div className="absolute left-0 right-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-lg z-20 py-1 max-h-56 overflow-y-auto">
-                    {categories.map((c) => (
-                      <button
-                        key={c.id}
-                        type="button"
-                        onClick={() => {
-                          handleChange("category_id", c.id);
-                          setCategoryOpen(false);
-                        }}
-                        className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
-                      >
-                        {c.name}
-                      </button>
-                    ))}
-                  </div>
-                )}
+                <button
+                  type="button"
+                  onClick={handleSave}
+                  disabled={submitting}
+                  className="w-full bg-[#CD051F] hover:bg-red-700 disabled:opacity-60 text-white rounded-lg py-2 text-xs font-bold transition shadow-sm"
+                >
+                  {submitting ? "Saving..." : "Save Product"}
+                </button>
               </div>
-            </div>
-
-            {/* Product Name */}
-            <div>
-              <label className="block text-base font-bold text-slate-900 mb-2">
-                Product Name<span className="text-[#CD051F]">*</span>
-              </label>
-              <input
-                type="text"
-                value={form.name}
-                onChange={(e) => handleChange("name", e.target.value)}
-                placeholder="Enter product name"
-                className={`w-full border rounded-lg px-4 py-3 text-sm text-slate-800 placeholder-slate-400 focus:outline-none transition ${
-                  errors.name
-                    ? "border-red-400 focus:border-red-500"
-                    : "border-slate-300 focus:border-[#CD051F]"
-                }`}
-              />
-              {errors.name && (
-                <p className="text-xs text-red-500 mt-1">{errors.name}</p>
-              )}
-            </div>
-
-            {/* Purchase / Selling Price */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-              <div>
-                <label className="block text-base font-bold text-slate-900 mb-2">
-                  Purchase Price (PKR)
-                </label>
-                <input
-                  type="number"
-                  value={form.purchase_price}
-                  onChange={(e) => handleChange("purchase_price", e.target.value)}
-                  placeholder="Enter purchase price"
-                  className="w-full border border-slate-300 rounded-lg px-4 py-3 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#CD051F] transition"
-                />
-              </div>
-              <div>
-                <label className="block text-base font-bold text-slate-900 mb-2">
-                  Selling Price (PKR)<span className="text-[#CD051F]">*</span>
-                </label>
-                <input
-                  type="number"
-                  value={form.selling_price}
-                  onChange={(e) => handleChange("selling_price", e.target.value)}
-                  placeholder="Enter selling price"
-                  className={`w-full border rounded-lg px-4 py-3 text-sm text-slate-800 placeholder-slate-400 focus:outline-none transition ${
-                    errors.selling_price
-                      ? "border-red-400 focus:border-red-500"
-                      : "border-slate-300 focus:border-[#CD051F]"
-                  }`}
-                />
-                {errors.selling_price && (
-                  <p className="text-xs text-red-500 mt-1">{errors.selling_price}</p>
-                )}
-              </div>
-            </div>
-
-            {/* Stock Quantity / Min Stock Level */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-              <div>
-                <label className="block text-base font-bold text-slate-900 mb-2">
-                  Stock Quantity<span className="text-[#CD051F]">*</span>
-                </label>
-                <input
-                  type="number"
-                  value={form.stock_quantity}
-                  onChange={(e) => handleChange("stock_quantity", e.target.value)}
-                  placeholder="Enter stock quantity"
-                  className={`w-full border rounded-lg px-4 py-3 text-sm text-slate-800 placeholder-slate-400 focus:outline-none transition ${
-                    errors.stock_quantity
-                      ? "border-red-400 focus:border-red-500"
-                      : "border-slate-300 focus:border-[#CD051F]"
-                  }`}
-                />
-                {errors.stock_quantity && (
-                  <p className="text-xs text-red-500 mt-1">{errors.stock_quantity}</p>
-                )}
-              </div>
-              <div>
-                <label className="block text-base font-bold text-slate-900 mb-2">
-                  Minimum Stock Level<span className="text-[#CD051F]">*</span>
-                </label>
-                <input
-                  type="number"
-                  value={form.min_stock_level}
-                  onChange={(e) => handleChange("min_stock_level", e.target.value)}
-                  placeholder="Enter min stock level"
-                  className={`w-full border rounded-lg px-4 py-3 text-sm text-slate-800 placeholder-slate-400 focus:outline-none transition ${
-                    errors.min_stock_level
-                      ? "border-red-400 focus:border-red-500"
-                      : "border-slate-300 focus:border-[#CD051F]"
-                  }`}
-                />
-                {errors.min_stock_level && (
-                  <p className="text-xs text-red-500 mt-1">{errors.min_stock_level}</p>
-                )}
-              </div>
-            </div>
-
-            {submitError && (
-              <p className="text-sm text-red-500 font-medium">{submitError}</p>
-            )}
-
-            {/* Buttons */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mt-2">
-              <button
-                type="button"
-                onClick={() => navigate("/admin/products")}
-                className="w-full border border-slate-300 rounded-lg py-3 text-sm font-bold text-slate-800 hover:bg-slate-50 transition"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleSave}
-                disabled={submitting}
-                className="w-full bg-[#CD051F] hover:bg-red-700 disabled:opacity-60 text-white rounded-lg py-3 text-sm font-bold transition shadow-sm"
-              >
-                {submitting ? "Saving..." : "Save Product"}
-              </button>
             </div>
           </div>
         </div>
