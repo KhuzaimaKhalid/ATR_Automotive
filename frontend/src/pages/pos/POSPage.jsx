@@ -20,12 +20,10 @@ const createEmptyCustomer = (name) => ({
 const POSPage = () => {
   const navigate = useNavigate();
 
-  const [pages, setPages] = useState([]);
   const [categories, setCategories] = useState([]);
   const [products, setProducts] = useState([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
 
-  const [selectedPageId, setSelectedPageId] = useState(null);
   const [selectedCategoryId, setSelectedCategoryId] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [mobileCategoryOpen, setMobileCategoryOpen] = useState(false);
@@ -40,21 +38,11 @@ const POSPage = () => {
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
-        const [pagesRes, categoriesRes, productsRes] = await Promise.all([
-          api.get("/pages").catch(() => ({ data: { pages: [] } })),
+        setLoadingProducts(true);
+        const [categoriesRes, productsRes] = await Promise.all([
           api.get("/categories").catch(() => ({ data: { categories: [] } })),
           api.get("/product").catch(() => api.get("/products")).catch(() => ({ data: [] })),
         ]);
-
-        const fetchedPages = Array.isArray(pagesRes.data?.pages)
-          ? pagesRes.data.pages
-          : Array.isArray(pagesRes.data)
-          ? pagesRes.data
-          : [];
-        setPages(fetchedPages);
-        if (fetchedPages.length > 0) {
-          setSelectedPageId(fetchedPages[0].id);
-        }
 
         const fetchedCategories = Array.isArray(categoriesRes.data?.categories)
           ? categoriesRes.data.categories
@@ -93,31 +81,20 @@ const POSPage = () => {
     }
   };
 
-  const categoriesForSelectedPage = useMemo(() => {
-    if (!selectedPageId) return categories;
-    return categories.filter((c) => String(c.page_id) === String(selectedPageId));
-  }, [categories, selectedPageId]);
-
   const filteredProducts = useMemo(() => {
     return products.filter((p) => {
       const isActive = p.status ? p.status.toLowerCase() !== "inactive" : true;
 
-      let matchesCategory = false;
+      let matchesCategory = true;
       if (selectedCategoryId) {
         matchesCategory = String(p.category_id) === String(selectedCategoryId);
-      } else if (categoriesForSelectedPage.length > 0) {
-        matchesCategory = categoriesForSelectedPage.some(
-          (c) => String(c.id) === String(p.category_id)
-        );
-      } else {
-        matchesCategory = true;
       }
 
       const matchesSearch = p.name ? p.name.toLowerCase().includes(searchTerm.toLowerCase()) : true;
 
       return isActive && matchesCategory && matchesSearch;
     });
-  }, [products, selectedCategoryId, categoriesForSelectedPage, searchTerm]);
+  }, [products, selectedCategoryId, searchTerm]);
 
   const updateActiveCart = (updater) => {
     setCustomers((prev) =>
@@ -257,12 +234,6 @@ const POSPage = () => {
   return (
     <div className="h-screen w-full bg-[#F8F9FA] flex flex-col overflow-hidden">
       <POSHeader
-        pages={pages}
-        selectedPageId={selectedPageId}
-        onSelectPage={(pageId) => {
-          setSelectedPageId(pageId);
-          setSelectedCategoryId(null);
-        }}
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
         onMenuClick={() => setMobileCategoryOpen(true)}
@@ -270,7 +241,7 @@ const POSPage = () => {
 
       <div className="flex flex-1 relative overflow-hidden">
         <CategorySidebar
-          categories={categoriesForSelectedPage}
+          categories={categories}
           selectedCategoryId={selectedCategoryId}
           onSelectCategory={setSelectedCategoryId}
           mobileOpen={mobileCategoryOpen}
@@ -291,7 +262,7 @@ const POSPage = () => {
           />
 
           <div className="flex flex-col xl:flex-row gap-4 flex-1 min-h-0 items-stretch overflow-hidden">
-            {/* Products Container: Scrollbar strictly beside Cart */}
+            {/* Scrollable Product Grid */}
             <div className="flex-1 min-w-0 max-h-[calc(100vh-140px)] overflow-y-auto pr-2">
               <ProductGrid
                 products={filteredProducts}
@@ -300,7 +271,7 @@ const POSPage = () => {
               />
             </div>
 
-            {/* Cart Panel: Fixed vertical fit */}
+            {/* Cart Panel */}
             <div className="w-full xl:w-[360px] shrink-0 max-h-[calc(100vh-140px)] flex flex-col">
               <CartPanel
                 cart={activeCart}
